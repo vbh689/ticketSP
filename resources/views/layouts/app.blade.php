@@ -263,6 +263,7 @@
             .list {
                 display: grid;
                 gap: 14px;
+                align-content: start;
             }
             .comment,
             .activity {
