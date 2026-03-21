@@ -47,6 +47,12 @@ Mặc định `.env.example` đang để MySQL theo định hướng kỹ thuậ
 php artisan migrate:fresh --seed
 ```
 
+Nếu muốn import thêm dữ liệu demo từ file CSV `docs/SupportTickets_Demo.csv`, chạy thêm:
+
+```bash
+php artisan db:seed --class=SupportTicketsDemoSeeder
+```
+
 5. Khởi động ứng dụng:
 
 ```bash
@@ -65,6 +71,21 @@ Sau khi chạy `php artisan migrate:fresh --seed`, có thể đăng nhập bằn
 
 - `support.lead@internal.local` / `password`
 - `support.agent@internal.local` / `password`
+
+## Seeders
+
+- `DatabaseSeeder`:
+  seed dữ liệu nền cho hệ thống, gồm tài khoản nội bộ mẫu, loại ticket cơ bản, phương thức liên hệ mẫu và một vài ticket demo nhỏ để kiểm tra nhanh.
+- `SupportTicketsDemoSeeder`:
+  import dataset demo từ [docs/SupportTickets_Demo.csv](/Applications/MAMP/htdocs/ticketSP/docs/SupportTickets_Demo.csv). Khi import:
+  `Loại ticket` luôn được cố định là `Phần mềm`, cột `Thời lượng xử lý` bị bỏ qua, và ticket được map sang trạng thái nội bộ của hệ thống.
+
+Lệnh thường dùng:
+
+```bash
+php artisan migrate:fresh --seed
+php artisan db:seed --class=SupportTicketsDemoSeeder
+```
 
 ## Lệnh hữu ích
 
