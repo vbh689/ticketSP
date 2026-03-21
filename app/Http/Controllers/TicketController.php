@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\User;
@@ -47,6 +48,11 @@ class TicketController extends Controller
 
         return view('tickets.create', [
             'categories' => TicketCategory::query()->where('is_active', true)->orderBy('name')->get(),
+            'contactMethods' => Tag::query()
+                ->forType(Tag::TYPE_CONTACT_METHOD)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(),
             'selectedCustomer' => $selectedCustomerId
                 ? Customer::query()->find($selectedCustomerId, [
                     'id',
@@ -65,15 +71,17 @@ class TicketController extends Controller
         $validated = $request->validate([
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
+            'requester_contact_method' => ['nullable', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
-            'category_id' => ['required', 'exists:ticket_categories,id'],
+            'category_name' => ['required', 'string', 'max:255'],
         ], [], [
             'customer_id' => 'khách hàng',
             'customer_name' => 'tên khách hàng',
+            'requester_contact_method' => 'phương thức liên hệ',
             'title' => 'tiêu đề',
             'description' => 'mô tả',
-            'category_id' => 'loại ticket',
+            'category_name' => 'loại ticket',
         ]);
 
         $customer = $validated['customer_id'] ?? null
@@ -82,11 +90,16 @@ class TicketController extends Controller
                 'name' => $validated['customer_name'],
             ]);
 
+        $category = $this->resolveCategory($validated['category_name']);
+        $contactMethod = $this->resolveContactMethod($validated['requester_contact_method'] ?? null);
+
         $ticket = Ticket::create([
             'customer_id' => $customer->id,
             'requester_name' => $customer->name,
             'requester_contact' => $this->buildRequesterContact($customer),
-            ...Arr::only($validated, ['title', 'description', 'category_id']),
+            'requester_contact_method' => $contactMethod,
+            ...Arr::only($validated, ['title', 'description']),
+            'category_id' => $category->id,
             'created_by' => $request->user()->id,
             'status' => Ticket::STATUS_OPEN,
         ]);
@@ -232,5 +245,53 @@ class TicketController extends Controller
         ]);
 
         return $parts ? implode(' | ', $parts) : null;
+    }
+
+    private function resolveCategory(string $name): TicketCategory
+    {
+        $normalizedName = \Illuminate\Support\Str::of($name)->trim()->squish()->toString();
+
+        $existingCategory = TicketCategory::query()
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($normalizedName)])
+            ->first();
+
+        if ($existingCategory) {
+            return $existingCategory;
+        }
+
+        return TicketCategory::create([
+            'name' => $normalizedName,
+            'code' => \Illuminate\Support\Str::slug($normalizedName),
+            'is_active' => true,
+        ]);
+    }
+
+    private function resolveContactMethod(?string $name): ?string
+    {
+        $normalizedName = \Illuminate\Support\Str::of((string) $name)->trim()->squish()->toString();
+
+        if ($normalizedName === '') {
+            return null;
+        }
+
+        $existingTag = Tag::query()
+            ->forType(Tag::TYPE_CONTACT_METHOD)
+            ->whereRaw('LOWER(name) = ?', [mb_strtolower($normalizedName)])
+            ->first();
+
+        if ($existingTag) {
+            return $existingTag->name;
+        }
+
+        $displayName = \Illuminate\Support\Str::title($normalizedName);
+
+        Tag::create([
+            'type' => Tag::TYPE_CONTACT_METHOD,
+            'name' => $displayName,
+            'code' => \Illuminate\Support\Str::slug($displayName),
+            'is_active' => true,
+        ]);
+
+        return $displayName;
     }
 }

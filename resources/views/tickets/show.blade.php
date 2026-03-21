@@ -49,6 +49,9 @@
                     <div>
                         <div class="meta">Khách hàng</div>
                         <strong>{{ $ticket->requester_name }}</strong>
+                        @if ($ticket->requester_contact_method)
+                            <div class="inline-note">Phương thức liên hệ: {{ $ticket->requester_contact_method }}</div>
+                        @endif
                         <div>{{ $ticket->requester_contact ?: 'Chưa có thông tin liên hệ' }}</div>
                     </div>
                     <div>

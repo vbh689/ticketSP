@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -104,6 +105,13 @@ class EmployeeController extends Controller
      */
     private function contactMethods(): array
     {
-        return ['Email', 'Phone', 'Telegram', 'Zalo', 'Teams'];
+        $contactMethods = Tag::query()
+            ->forType(Tag::TYPE_CONTACT_METHOD)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->pluck('name')
+            ->all();
+
+        return $contactMethods !== [] ? $contactMethods : ['Email', 'Phone', 'Telegram', 'Zalo', 'Teams'];
     }
 }

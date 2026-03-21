@@ -3,6 +3,7 @@
 namespace Tests\Feature\Tickets;
 
 use App\Models\Customer;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\User;
@@ -20,9 +21,10 @@ class TicketManagementTest extends TestCase
 
         $response = $this->actingAs($support)->post('/tickets', [
             'customer_name' => 'Cong ty Le Van A',
+            'requester_contact_method' => 'Telegram',
             'title' => 'Không đăng nhập được wifi',
             'description' => 'Thiết bị báo sai mật khẩu dù đã đổi nhiều lần.',
-            'category_id' => $category->id,
+            'category_name' => $category->name,
         ]);
 
         $ticket = Ticket::query()->first();
@@ -35,6 +37,7 @@ class TicketManagementTest extends TestCase
             'id' => $ticket->id,
             'customer_id' => $customer->id,
             'requester_name' => 'Cong ty Le Van A',
+            'requester_contact_method' => 'Telegram',
             'status' => Ticket::STATUS_OPEN,
             'assignee_id' => null,
             'created_by' => $support->id,
@@ -57,7 +60,7 @@ class TicketManagementTest extends TestCase
             'customer_name',
             'title',
             'description',
-            'category_id',
+            'category_name',
         ]);
     }
 
@@ -76,9 +79,10 @@ class TicketManagementTest extends TestCase
 
         $response = $this->actingAs($support)->post('/tickets', [
             'customer_id' => $customer->id,
+            'requester_contact_method' => 'Email',
             'title' => 'Loi kich hoat phan mem',
             'description' => 'Can kiem tra lai thong tin kich hoat tren may moi.',
-            'category_id' => $category->id,
+            'category_name' => $category->name,
         ]);
 
         $ticket = Ticket::query()->first();
@@ -89,6 +93,54 @@ class TicketManagementTest extends TestCase
             'id' => $ticket->id,
             'customer_id' => $customer->id,
             'requester_name' => 'Cong ty Hien Co',
+            'requester_contact_method' => 'Email',
+        ]);
+    }
+
+    public function test_ticket_creation_matches_existing_or_creates_new_category_and_contact_method(): void
+    {
+        $support = User::factory()->create();
+        Tag::query()->create([
+            'type' => Tag::TYPE_CONTACT_METHOD,
+            'code' => 'telegram',
+            'name' => 'Telegram',
+            'is_active' => true,
+        ]);
+        TicketCategory::factory()->create([
+            'name' => 'Phần cứng',
+            'code' => 'phan-cung',
+        ]);
+
+        $this->actingAs($support)->post('/tickets', [
+            'customer_name' => 'Cong ty Match Tag',
+            'requester_contact_method' => 'telegram',
+            'title' => 'Lỗi bàn phím',
+            'description' => 'Bàn phím không nhận.',
+            'category_name' => 'phần cứng',
+        ])->assertRedirect();
+
+        $this->actingAs($support)->post('/tickets', [
+            'customer_name' => 'Cong ty New Tag',
+            'requester_contact_method' => 'Signal',
+            'title' => 'Cấp lại quyền truy cập',
+            'description' => 'Cần thêm quyền mới.',
+            'category_name' => 'Quyền truy cập',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tags', [
+            'type' => Tag::TYPE_CONTACT_METHOD,
+            'name' => 'Signal',
+        ]);
+        $this->assertDatabaseHas('ticket_categories', [
+            'name' => 'Quyền truy cập',
+        ]);
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Lỗi bàn phím',
+            'requester_contact_method' => 'Telegram',
+        ]);
+        $this->assertDatabaseHas('tickets', [
+            'title' => 'Cấp lại quyền truy cập',
+            'requester_contact_method' => 'Signal',
         ]);
     }
 

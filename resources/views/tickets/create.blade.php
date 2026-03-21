@@ -92,14 +92,43 @@
                 <div class="grid grid-2">
                     <label>
                         Loại ticket
-                        <select name="category_id" required>
-                            <option value="">Chọn loại ticket</option>
-                            @foreach ($categories as $category)
-                                <option value="{{ $category->id }}" @selected((string) old('category_id') === (string) $category->id)>{{ $category->name }}</option>
-                            @endforeach
-                        </select>
+                        <input
+                            type="text"
+                            name="category_name"
+                            id="category_name"
+                            value="{{ old('category_name') }}"
+                            list="ticket_category_suggestions"
+                            placeholder="Gõ để chọn hoặc tạo mới loại ticket"
+                            required
+                        >
+                        <span class="inline-note">Ví dụ gõ `phan` sẽ được gợi ý `Phần mềm`. Nếu chưa có, hệ thống sẽ tự tạo loại mới.</span>
+                    </label>
+
+                    <label>
+                        Phương thức liên hệ
+                        <input
+                            type="text"
+                            name="requester_contact_method"
+                            id="requester_contact_method"
+                            value="{{ old('requester_contact_method') }}"
+                            list="contact_method_suggestions"
+                            placeholder="Phone, Telegram, Email..."
+                        >
+                        <span class="inline-note">Nếu trùng với phương thức đã có thì hệ thống dùng lại, nếu chưa có sẽ tự tạo tag mới.</span>
                     </label>
                 </div>
+
+                <datalist id="ticket_category_suggestions">
+                    @foreach ($categories as $category)
+                        <option value="{{ $category->name }}"></option>
+                    @endforeach
+                </datalist>
+
+                <datalist id="contact_method_suggestions">
+                    @foreach ($contactMethods as $contactMethod)
+                        <option value="{{ $contactMethod->name }}"></option>
+                    @endforeach
+                </datalist>
 
                 <label>
                     Mô tả chi tiết
@@ -116,8 +145,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const customerSearchUrl = @json(route('customers.search'));
-            const initialSelectedCustomer = @json($selectedCustomer);
+            const customerSearchUrl = {{ \Illuminate\Support\Js::from(route('customers.search')) }};
+            const initialSelectedCustomer = {{ \Illuminate\Support\Js::from($selectedCustomer) }};
             const searchInput = document.getElementById('customer_search');
             const customerIdInput = document.getElementById('customer_id');
             const customerNameInput = document.getElementById('customer_name');

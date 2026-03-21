@@ -15,6 +15,7 @@
 
             <div class="nav">
                 @if (auth()->user()?->is_manager)
+                    <a class="button button-muted" href="{{ route('admin.tags.index') }}">Tags</a>
                     <a class="button button-muted" href="{{ route('customers.index') }}">Khách hàng</a>
                     <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
                 @endif
@@ -175,6 +176,9 @@
                                 </td>
                                 <td>
                                     <strong>{!! $ticket->highlighted_requester_name ?? e($ticket->requester_name) !!}</strong>
+                                    @if ($ticket->requester_contact_method)
+                                        <div class="inline-note">Phương thức: {{ $ticket->requester_contact_method }}</div>
+                                    @endif
                                     <div class="meta">{!! $ticket->highlighted_requester_contact ?? e($ticket->requester_contact ?: 'Chưa có liên hệ') !!}</div>
                                 </td>
                                 <td>{{ $ticket->category->name }}</td>

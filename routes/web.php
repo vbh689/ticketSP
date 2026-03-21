@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\SearchMaintenanceController;
+use App\Http\Controllers\TagController;
 use App\Http\Controllers\TicketCommentController;
 use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,13 @@ Route::middleware(['auth', 'active'])->group(function (): void {
 
     Route::middleware('manager')->group(function (): void {
         Route::post('/admin/search/rebuild', [SearchMaintenanceController::class, 'rebuild'])->name('search.rebuild');
+        Route::get('/admin/tags', [TagController::class, 'index'])->name('admin.tags.index');
+        Route::post('/admin/ticket-categories', [TagController::class, 'storeTicketCategory'])->name('ticket-categories.store');
+        Route::patch('/admin/ticket-categories/{ticketCategory}', [TagController::class, 'updateTicketCategory'])->whereNumber('ticketCategory')->name('ticket-categories.update');
+        Route::delete('/admin/ticket-categories/{ticketCategory}', [TagController::class, 'destroyTicketCategory'])->whereNumber('ticketCategory')->name('ticket-categories.destroy');
+        Route::post('/admin/tags', [TagController::class, 'storeTag'])->name('tags.store');
+        Route::patch('/admin/tags/{tag}', [TagController::class, 'updateTag'])->whereNumber('tag')->name('tags.update');
+        Route::delete('/admin/tags/{tag}', [TagController::class, 'destroyTag'])->whereNumber('tag')->name('tags.destroy');
 
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');

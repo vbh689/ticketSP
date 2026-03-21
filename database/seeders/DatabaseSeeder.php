@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Customer;
+use App\Models\Tag;
 use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\User;
@@ -24,6 +25,15 @@ class DatabaseSeeder extends Seeder
         ])->map(fn (array $category) => TicketCategory::query()->firstOrCreate(
             ['code' => $category['code']],
             ['name' => $category['name'], 'is_active' => true]
+        ));
+
+        collect([
+            ['type' => Tag::TYPE_CONTACT_METHOD, 'code' => 'email', 'name' => 'Email'],
+            ['type' => Tag::TYPE_CONTACT_METHOD, 'code' => 'phone', 'name' => 'Phone'],
+            ['type' => Tag::TYPE_CONTACT_METHOD, 'code' => 'telegram', 'name' => 'Telegram'],
+        ])->each(fn (array $tag) => Tag::query()->firstOrCreate(
+            ['type' => $tag['type'], 'code' => $tag['code']],
+            ['name' => $tag['name'], 'is_active' => true]
         ));
 
         $customers = collect([
@@ -95,6 +105,7 @@ class DatabaseSeeder extends Seeder
             'category_id' => $categories[3]->id,
             'requester_name' => $abcCompany?->name ?? 'Cong Ty ABC',
             'requester_contact' => $this->buildRequesterContact($abcCompany),
+            'requester_contact_method' => 'Telegram',
             'title' => 'Máy tính không vào được VPN',
             'description' => 'Người dùng báo không đăng nhập được VPN từ sáng nay.',
             'status' => Ticket::STATUS_OPEN,
@@ -107,6 +118,7 @@ class DatabaseSeeder extends Seeder
             'category_id' => $categories[1]->id,
             'requester_name' => $xyzCompany?->name ?? 'Cong Ty XYZ',
             'requester_contact' => $this->buildRequesterContact($xyzCompany),
+            'requester_contact_method' => 'Phone',
             'title' => 'Cài lại Microsoft Office',
             'description' => 'Thiết bị mới cần cài lại bộ Office và kích hoạt license.',
             'status' => Ticket::STATUS_IN_PROGRESS,

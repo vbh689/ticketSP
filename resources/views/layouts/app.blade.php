@@ -418,6 +418,13 @@
                 border: 1px solid var(--line);
                 background: var(--panel-strong);
             }
+            .simple-row-form {
+                display: grid;
+                grid-template-columns: minmax(220px, 1fr) auto;
+                gap: 10px;
+                align-items: center;
+                padding: 14px 10px;
+            }
             @media (max-width: 900px) {
                 .grid-2,
                 .grid-3,
@@ -446,6 +453,9 @@
                 }
                 .nav > .inline-form > button {
                     width: 100%;
+                }
+                .simple-row-form {
+                    grid-template-columns: 1fr;
                 }
                 table,
                 thead,
