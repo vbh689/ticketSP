@@ -223,5 +223,8 @@
                 });
             });
         </script>
+        
+        @include('partials.search-rebuild')
+
     </main>
 @endsection

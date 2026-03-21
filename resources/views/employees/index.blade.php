@@ -83,6 +83,6 @@
             <div class="pagination">{{ $employees->links() }}</div>
         </section>
 
-        @include('partials.search-rebuild')
+        <!-- @include('partials.search-rebuild') -->
     </main>
 @endsection

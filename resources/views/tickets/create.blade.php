@@ -71,7 +71,7 @@
                         <span class="inline-note">Chưa chọn khách có sẵn thì tên này sẽ được dùng để tạo hồ sơ khách mới.</span>
                     </label>
 
-                    <div class="grid grid-2">
+                    <!-- <div class="grid grid-2">
                         <label>
                             Thông tin liên hệ hiện có
                             <input type="text" id="customer_contact_preview" value="" disabled>
@@ -81,7 +81,7 @@
                             Số lượng license hiện có
                             <input type="text" id="customer_license_preview" value="" disabled>
                         </label>
-                    </div>
+                    </div> -->
                 </section>
 
                 <label>

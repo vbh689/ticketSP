@@ -15,10 +15,10 @@
 
             <div class="nav">
                 @if (! $isReadOnly)
-                    @if (auth()->user()?->is_manager)
+                    <!-- @if (auth()->user()?->is_manager)
                         <a class="button button-muted" href="{{ route('customers.index') }}">Khách hàng</a>
                         <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
-                    @endif
+                    @endif -->
                     <a class="button button-muted" href="{{ route('tickets.index') }}">Quay lại backlog</a>
                 @endif
             </div>
@@ -80,7 +80,7 @@
                         @include('tickets.partials.status-badge', ['status' => $ticket->status])
                     </div>
                     <div>
-                        <div class="meta">Link chia sẻ read-only</div>
+                        <div class="meta">Chia sẻ link</div>
                         <div class="copy-share">
                             <button
                                 type="button"
@@ -92,7 +92,7 @@
                                 Copy link
                             </button>
                         </div>
-                        <div class="inline-note">Dùng nút copy để chia sẻ link xem read-only cho khách hàng.</div>
+                        <!-- <div class="inline-note">Dùng nút copy để chia sẻ link xem read-only cho khách hàng.</div> -->
                     </div>
                 </div>
 
