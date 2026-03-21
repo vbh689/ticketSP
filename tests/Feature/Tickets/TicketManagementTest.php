@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class TicketManagementTest extends TestCase
@@ -458,5 +459,103 @@ class TicketManagementTest extends TestCase
         $this->assertSame('TK-260326-001', $firstTicket->ticket_code);
         $this->assertSame('TK-260326-002', $secondTicket->ticket_code);
         $this->assertSame('TK-260327-001', $nextDayTicket->ticket_code);
+    }
+
+    public function test_ticket_index_shows_csv_export_presets(): void
+    {
+        $support = User::factory()->create();
+
+        $response = $this->actingAs($support)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSee('Xuất CSV ticket');
+        $response->assertSee('Hôm nay');
+        $response->assertSee('Tuần này');
+        $response->assertSee('Tháng này');
+        $response->assertSee('Tháng trước');
+        $response->assertSee('7 ngày gần nhất');
+        $response->assertSee('30 ngày gần nhất');
+        $response->assertSee('Tất cả ticket');
+    }
+
+    public function test_support_can_export_tickets_as_csv_for_last_7_days(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 3, 22, 10, 0, 0));
+
+        $support = User::factory()->create(['name' => 'Tran Support']);
+        $assignee = User::factory()->create(['name' => 'Le Assignee']);
+        $category = TicketCategory::factory()->create(['name' => 'Phần mềm']);
+
+        Ticket::factory()->create([
+            'title' => 'Nam trong 7 ngay',
+            'description' => 'Can export',
+            'category_id' => $category->id,
+            'assignee_id' => $assignee->id,
+            'created_by' => $support->id,
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
+        ]);
+
+        Ticket::factory()->create([
+            'title' => 'Moc 7 ngay',
+            'description' => 'Van duoc tinh',
+            'category_id' => $category->id,
+            'created_by' => $support->id,
+            'created_at' => now()->subDays(6)->startOfDay(),
+            'updated_at' => now()->subDays(6)->startOfDay(),
+        ]);
+
+        Ticket::factory()->create([
+            'title' => 'Qua 7 ngay',
+            'description' => 'Khong xuat',
+            'category_id' => $category->id,
+            'created_by' => $support->id,
+            'created_at' => now()->subDays(7),
+            'updated_at' => now()->subDays(7),
+        ]);
+
+        $response = $this->actingAs($support)->get(route('tickets.export', [
+            'period' => 'last_7_days',
+        ]));
+
+        Carbon::setTestNow();
+
+        $response->assertOk();
+        $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
+        $content = $response->streamedContent();
+
+        $this->assertStringContainsString('Mã ticket', $content);
+        $this->assertStringContainsString('Nam trong 7 ngay', $content);
+        $this->assertStringContainsString('Moc 7 ngay', $content);
+        $this->assertStringNotContainsString('Qua 7 ngay', $content);
+        $this->assertStringContainsString('Le Assignee', $content);
+    }
+
+    public function test_support_can_export_all_tickets_as_csv(): void
+    {
+        $support = User::factory()->create();
+        $category = TicketCategory::factory()->create();
+
+        Ticket::factory()->create([
+            'title' => 'Ticket A',
+            'category_id' => $category->id,
+            'created_by' => $support->id,
+        ]);
+
+        Ticket::factory()->create([
+            'title' => 'Ticket B',
+            'category_id' => $category->id,
+            'created_by' => $support->id,
+        ]);
+
+        $response = $this->actingAs($support)->get(route('tickets.export', [
+            'period' => 'all',
+        ]));
+
+        $response->assertOk();
+        $content = $response->streamedContent();
+
+        $this->assertStringContainsString('Ticket A', $content);
+        $this->assertStringContainsString('Ticket B', $content);
     }
 }

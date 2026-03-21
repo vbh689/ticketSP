@@ -12,8 +12,10 @@ use App\Support\TicketActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TicketController extends Controller
 {
@@ -39,6 +41,69 @@ class TicketController extends Controller
             'assignees' => User::query()->where('status', 'active')->orderBy('name')->get(),
             'statuses' => Ticket::statuses(),
             'filters' => $filters,
+            'exportPeriods' => $this->exportPeriods(),
+        ]);
+    }
+
+    public function export(Request $request): StreamedResponse
+    {
+        $periods = $this->exportPeriods();
+
+        $validated = $request->validate([
+            'period' => ['required', Rule::in(array_keys($periods))],
+        ]);
+
+        $selectedPeriod = $periods[$validated['period']];
+        $tickets = $this->buildExportQuery($validated['period'])->get();
+        $filename = sprintf(
+            'tickets-%s-%s.csv',
+            $selectedPeriod['slug'],
+            now()->format('Ymd-His')
+        );
+
+        return response()->streamDownload(function () use ($tickets): void {
+            $handle = fopen('php://output', 'wb');
+
+            if (! $handle) {
+                return;
+            }
+
+            fwrite($handle, "\xEF\xBB\xBF");
+            fputcsv($handle, [
+                'Mã ticket',
+                'Ngày tạo',
+                'Trạng thái',
+                'Ưu tiên',
+                'Loại ticket',
+                'Khách hàng',
+                'Liên hệ',
+                'Phương thức liên hệ',
+                'Tiêu đề',
+                'Mô tả',
+                'Người phụ trách',
+                'Người tạo',
+            ]);
+
+            foreach ($tickets as $ticket) {
+                fputcsv($handle, [
+                    $ticket->ticket_code,
+                    $ticket->created_at?->format('d/m/Y H:i'),
+                    $ticket->status,
+                    $ticket->priority,
+                    $ticket->category?->name,
+                    $ticket->requester_name,
+                    $ticket->requester_contact,
+                    $ticket->requester_contact_method,
+                    $ticket->title,
+                    $ticket->description,
+                    $ticket->assignee?->name,
+                    $ticket->creator?->name,
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -250,6 +315,58 @@ class TicketController extends Controller
         ]);
 
         return $parts ? implode(' | ', $parts) : null;
+    }
+
+    /**
+     * @return array<string, array{label: string, slug: string}>
+     */
+    private function exportPeriods(): array
+    {
+        return [
+            'today' => ['label' => 'Hôm nay', 'slug' => 'hom-nay'],
+            'this_week' => ['label' => 'Tuần này', 'slug' => 'tuan-nay'],
+            'this_month' => ['label' => 'Tháng này', 'slug' => 'thang-nay'],
+            'last_month' => ['label' => 'Tháng trước', 'slug' => 'thang-truoc'],
+            'last_7_days' => ['label' => '7 ngày gần nhất', 'slug' => '7-ngay-gan-nhat'],
+            'last_30_days' => ['label' => '30 ngày gần nhất', 'slug' => '30-ngay-gan-nhat'],
+            'all' => ['label' => 'Tất cả ticket', 'slug' => 'tat-ca-ticket'],
+        ];
+    }
+
+    private function buildExportQuery(string $period): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = Ticket::query()
+            ->with(['category', 'assignee', 'creator'])
+            ->latest();
+
+        [$from, $to] = $this->resolveExportRange($period);
+
+        if ($from && $to) {
+            $query->whereBetween('created_at', [$from, $to]);
+        }
+
+        return $query;
+    }
+
+    /**
+     * @return array{0: ?Carbon, 1: ?Carbon}
+     */
+    private function resolveExportRange(string $period): array
+    {
+        $now = now();
+
+        return match ($period) {
+            'today' => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            'this_week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
+            'this_month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            'last_month' => [
+                $now->copy()->subMonthNoOverflow()->startOfMonth(),
+                $now->copy()->subMonthNoOverflow()->endOfMonth(),
+            ],
+            'last_7_days' => [$now->copy()->subDays(6)->startOfDay(), $now->copy()->endOfDay()],
+            'last_30_days' => [$now->copy()->subDays(29)->startOfDay(), $now->copy()->endOfDay()],
+            'all' => [null, null],
+        };
     }
 
     private function resolveCategory(string $name): TicketCategory

@@ -443,6 +443,18 @@
                 color: var(--muted);
                 opacity: 0.72;
             }
+            .export-panel {
+                margin-top: 24px;
+                padding-top: 24px;
+                border-top: 1px solid rgba(215, 200, 180, 0.8);
+                display: grid;
+                gap: 14px;
+            }
+            .export-actions {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
             .simple-row-form {
                 display: grid;
                 grid-template-columns: minmax(220px, 1fr) auto;

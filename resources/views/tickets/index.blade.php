@@ -221,6 +221,22 @@
             </div>
 
             <div class="pagination">{{ $tickets->links() }}</div>
+
+            <div class="export-panel">
+                <div>
+                    <h3 class="section-title">Xuất CSV ticket</h3>
+                    <p class="section-copy">Tải nhanh danh sách ticket theo mốc thời gian tạo để tổng hợp hoặc gửi nội bộ.</p>
+                </div>
+
+                <div class="export-actions">
+                    @foreach ($exportPeriods as $periodValue => $period)
+                        <form method="GET" action="{{ route('tickets.export') }}" class="inline-form">
+                            <input type="hidden" name="period" value="{{ $periodValue }}">
+                            <button class="button button-muted" type="submit">{{ $period['label'] }}</button>
+                        </form>
+                    @endforeach
+                </div>
+            </div>
         </section>
 
         <script>

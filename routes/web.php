@@ -28,6 +28,7 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::get('/customers/search', [CustomerController::class, 'search'])->name('customers.search');
 
     Route::get('/tickets', [TicketController::class, 'index'])->name('tickets.index');
+    Route::get('/tickets/export', [TicketController::class, 'export'])->name('tickets.export');
     Route::get('/tickets/create', [TicketController::class, 'create'])->name('tickets.create');
     Route::post('/tickets', [TicketController::class, 'store'])->name('tickets.store');
     Route::patch('/tickets/bulk-status', [TicketController::class, 'bulkUpdateStatus'])->name('tickets.bulk-status.update');
