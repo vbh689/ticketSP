@@ -93,10 +93,15 @@
             }
             .button,
             button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
                 border: 0;
                 cursor: pointer;
                 border-radius: 999px;
                 padding: 11px 18px;
+                max-width: 100%;
+                white-space: nowrap;
                 transition: transform 140ms ease, opacity 140ms ease, background 140ms ease;
             }
             .button:hover,
@@ -275,7 +280,7 @@
                 color: var(--muted);
             }
             .inline-form {
-                display: inline;
+                display: inline-flex;
             }
             .checkbox-cell {
                 width: 44px;
@@ -367,6 +372,18 @@
                 }
                 .toolbar {
                     display: grid;
+                }
+                .nav {
+                    width: 100%;
+                    align-items: stretch;
+                }
+                .nav > a,
+                .nav > button,
+                .nav > .inline-form {
+                    width: 100%;
+                }
+                .nav > .inline-form > button {
+                    width: 100%;
                 }
                 table,
                 thead,

@@ -64,5 +64,5 @@
 
 <div class="nav">
     <button class="button-primary" type="submit">{{ $submitLabel }}</button>
-    <a class="button button-muted" href="{{ route('employees.index') }}">Quay lại danh sách</a>
+    <a class="button button-muted" href="{{ route('employees.index') }}">Quay lại</a>
 </div>
