@@ -481,6 +481,7 @@ class TicketManagementTest extends TestCase
     public function test_support_can_export_tickets_as_csv_for_last_7_days(): void
     {
         Carbon::setTestNow(Carbon::create(2026, 3, 22, 10, 0, 0));
+        $resolvedAt = now()->subDay();
 
         $support = User::factory()->create(['name' => 'Tran Support']);
         $assignee = User::factory()->create(['name' => 'Le Assignee']);
@@ -492,6 +493,8 @@ class TicketManagementTest extends TestCase
             'category_id' => $category->id,
             'assignee_id' => $assignee->id,
             'created_by' => $support->id,
+            'status' => Ticket::STATUS_RESOLVED,
+            'resolved_at' => $resolvedAt,
             'created_at' => now()->subDays(2),
             'updated_at' => now()->subDays(2),
         ]);
@@ -525,10 +528,12 @@ class TicketManagementTest extends TestCase
         $content = $response->streamedContent();
 
         $this->assertStringContainsString('Mã ticket', $content);
+        $this->assertStringContainsString('Thời gian resolved', $content);
         $this->assertStringContainsString('Nam trong 7 ngay', $content);
         $this->assertStringContainsString('Moc 7 ngay', $content);
         $this->assertStringNotContainsString('Qua 7 ngay', $content);
         $this->assertStringContainsString('Le Assignee', $content);
+        $this->assertStringContainsString($resolvedAt->format('d/m/Y H:i'), $content);
     }
 
     public function test_support_can_export_all_tickets_as_csv(): void

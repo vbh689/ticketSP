@@ -72,6 +72,7 @@ class TicketController extends Controller
             fputcsv($handle, [
                 'Mã ticket',
                 'Ngày tạo',
+                'Thời gian resolved',
                 'Trạng thái',
                 'Ưu tiên',
                 'Loại ticket',
@@ -88,6 +89,7 @@ class TicketController extends Controller
                 fputcsv($handle, [
                     $ticket->ticket_code,
                     $ticket->created_at?->format('d/m/Y H:i'),
+                    $ticket->resolved_at?->format('d/m/Y H:i'),
                     $ticket->status,
                     $ticket->priority,
                     $ticket->category?->name,
