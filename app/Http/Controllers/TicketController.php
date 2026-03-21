@@ -53,6 +53,7 @@ class TicketController extends Controller
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(),
+            'priorities' => Ticket::priorities(),
             'selectedCustomer' => $selectedCustomerId
                 ? Customer::query()->find($selectedCustomerId, [
                     'id',
@@ -72,6 +73,7 @@ class TicketController extends Controller
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
             'requester_contact_method' => ['nullable', 'string', 'max:255'],
+            'priority' => ['nullable', Rule::in(Ticket::priorities())],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'category_name' => ['required', 'string', 'max:255'],
@@ -79,6 +81,7 @@ class TicketController extends Controller
             'customer_id' => 'khách hàng',
             'customer_name' => 'tên khách hàng',
             'requester_contact_method' => 'phương thức liên hệ',
+            'priority' => 'ưu tiên',
             'title' => 'tiêu đề',
             'description' => 'mô tả',
             'category_name' => 'loại ticket',
@@ -92,12 +95,14 @@ class TicketController extends Controller
 
         $category = $this->resolveCategory($validated['category_name']);
         $contactMethod = $this->resolveContactMethod($validated['requester_contact_method'] ?? null);
+        $priority = $validated['priority'] ?? Ticket::PRIORITY_NORMAL;
 
         $ticket = Ticket::create([
             'customer_id' => $customer->id,
             'requester_name' => $customer->name,
             'requester_contact' => $this->buildRequesterContact($customer),
             'requester_contact_method' => $contactMethod,
+            'priority' => $priority,
             ...Arr::only($validated, ['title', 'description']),
             'category_id' => $category->id,
             'created_by' => $request->user()->id,
@@ -294,4 +299,5 @@ class TicketController extends Controller
 
         return $displayName;
     }
+
 }

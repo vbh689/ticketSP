@@ -57,6 +57,9 @@
                     <div>
                         <div class="meta">Loại ticket</div>
                         <strong>{{ $ticket->category->name }}</strong>
+                        @if ($ticket->priority)
+                            <div class="inline-note">Ưu tiên: {{ $ticket->priority }}</div>
+                        @endif
                     </div>
                     <div>
                         <div class="meta">Người tạo</div>

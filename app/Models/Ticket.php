@@ -23,6 +23,12 @@ class Ticket extends Model
 
     public const STATUS_CLOSED = 'Closed';
 
+    public const PRIORITY_LOW = 'Thấp';
+
+    public const PRIORITY_NORMAL = 'Bình thường';
+
+    public const PRIORITY_HIGH = 'Cao';
+
     /** @use HasFactory<TicketFactory> */
     use HasFactory, Searchable;
 
@@ -31,6 +37,7 @@ class Ticket extends Model
         'requester_name',
         'requester_contact',
         'requester_contact_method',
+        'priority',
         'title',
         'description',
         'category_id',
@@ -91,6 +98,18 @@ class Ticket extends Model
             self::STATUS_IN_PROGRESS,
             self::STATUS_RESOLVED,
             self::STATUS_CLOSED,
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function priorities(): array
+    {
+        return [
+            self::PRIORITY_LOW,
+            self::PRIORITY_NORMAL,
+            self::PRIORITY_HIGH,
         ];
     }
 
@@ -182,6 +201,7 @@ class Ticket extends Model
             'requester_name' => $this->requester_name,
             'requester_contact' => $this->requester_contact,
             'requester_contact_method' => $this->requester_contact_method,
+            'priority' => $this->priority,
             'description' => $this->description,
             'category_id' => $this->category_id,
             'category_name' => $this->category?->name,

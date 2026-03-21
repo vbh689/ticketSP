@@ -18,10 +18,10 @@ class TicketManagementTest extends TestCase
     {
         $support = User::factory()->create();
         $category = TicketCategory::factory()->create();
-
         $response = $this->actingAs($support)->post('/tickets', [
             'customer_name' => 'Cong ty Le Van A',
             'requester_contact_method' => 'Telegram',
+            'priority' => Ticket::PRIORITY_HIGH,
             'title' => 'Không đăng nhập được wifi',
             'description' => 'Thiết bị báo sai mật khẩu dù đã đổi nhiều lần.',
             'category_name' => $category->name,
@@ -38,6 +38,7 @@ class TicketManagementTest extends TestCase
             'customer_id' => $customer->id,
             'requester_name' => 'Cong ty Le Van A',
             'requester_contact_method' => 'Telegram',
+            'priority' => Ticket::PRIORITY_HIGH,
             'status' => Ticket::STATUS_OPEN,
             'assignee_id' => null,
             'created_by' => $support->id,
@@ -80,6 +81,7 @@ class TicketManagementTest extends TestCase
         $response = $this->actingAs($support)->post('/tickets', [
             'customer_id' => $customer->id,
             'requester_contact_method' => 'Email',
+            'priority' => Ticket::PRIORITY_NORMAL,
             'title' => 'Loi kich hoat phan mem',
             'description' => 'Can kiem tra lai thong tin kich hoat tren may moi.',
             'category_name' => $category->name,
@@ -94,6 +96,7 @@ class TicketManagementTest extends TestCase
             'customer_id' => $customer->id,
             'requester_name' => 'Cong ty Hien Co',
             'requester_contact_method' => 'Email',
+            'priority' => Ticket::PRIORITY_NORMAL,
         ]);
     }
 
@@ -114,6 +117,7 @@ class TicketManagementTest extends TestCase
         $this->actingAs($support)->post('/tickets', [
             'customer_name' => 'Cong ty Match Tag',
             'requester_contact_method' => 'telegram',
+            'priority' => Ticket::PRIORITY_HIGH,
             'title' => 'Lỗi bàn phím',
             'description' => 'Bàn phím không nhận.',
             'category_name' => 'phần cứng',
@@ -122,6 +126,7 @@ class TicketManagementTest extends TestCase
         $this->actingAs($support)->post('/tickets', [
             'customer_name' => 'Cong ty New Tag',
             'requester_contact_method' => 'Signal',
+            'priority' => Ticket::PRIORITY_NORMAL,
             'title' => 'Cấp lại quyền truy cập',
             'description' => 'Cần thêm quyền mới.',
             'category_name' => 'Quyền truy cập',
@@ -137,10 +142,12 @@ class TicketManagementTest extends TestCase
         $this->assertDatabaseHas('tickets', [
             'title' => 'Lỗi bàn phím',
             'requester_contact_method' => 'Telegram',
+            'priority' => Ticket::PRIORITY_HIGH,
         ]);
         $this->assertDatabaseHas('tickets', [
             'title' => 'Cấp lại quyền truy cập',
             'requester_contact_method' => 'Signal',
+            'priority' => Ticket::PRIORITY_NORMAL,
         ]);
     }
 

@@ -181,7 +181,12 @@
                                     @endif
                                     <div class="meta">{!! $ticket->highlighted_requester_contact ?? e($ticket->requester_contact ?: 'Chưa có liên hệ') !!}</div>
                                 </td>
-                                <td>{{ $ticket->category->name }}</td>
+                                <td>
+                                    {{ $ticket->category->name }}
+                                    @if ($ticket->priority)
+                                        <div class="inline-note">Ưu tiên: {{ $ticket->priority }}</div>
+                                    @endif
+                                </td>
                                 <td>
                                     @if ($relatedHandlers->isNotEmpty())
                                         <div class="people-list">

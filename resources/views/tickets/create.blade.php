@@ -90,45 +90,66 @@
                 </label>
 
                 <div class="grid grid-2">
-                    <label>
-                        Loại ticket
-                        <input
-                            type="text"
-                            name="category_name"
-                            id="category_name"
-                            value="{{ old('category_name') }}"
-                            list="ticket_category_suggestions"
-                            placeholder="Gõ để chọn hoặc tạo mới loại ticket"
-                            required
-                        >
-                        <span class="inline-note">Ví dụ gõ `phan` sẽ được gợi ý `Phần mềm`. Nếu chưa có, hệ thống sẽ tự tạo loại mới.</span>
-                    </label>
+                    <div class="stack" style="gap: 12px;">
+                        <input type="hidden" name="category_name" id="category_name" value="{{ old('category_name') }}">
 
-                    <label>
-                        Phương thức liên hệ
-                        <input
-                            type="text"
-                            name="requester_contact_method"
-                            id="requester_contact_method"
-                            value="{{ old('requester_contact_method') }}"
-                            list="contact_method_suggestions"
-                            placeholder="Phone, Telegram, Email..."
-                        >
-                        <span class="inline-note">Nếu trùng với phương thức đã có thì hệ thống dùng lại, nếu chưa có sẽ tự tạo tag mới.</span>
-                    </label>
+                        <label>
+                            Loại ticket
+                            <input
+                                type="text"
+                                id="category_search"
+                                value="{{ old('category_name') }}"
+                                placeholder="Gõ để chọn nhanh hoặc tạo mới loại ticket"
+                                autocomplete="off"
+                                required
+                            >
+                            <span class="inline-note">Ví dụ gõ `phan` sẽ hiện `Phần mềm`, `Phần cứng`. Nếu không có loại phù hợp, hệ thống sẽ tự tạo loại mới theo nội dung bạn nhập.</span>
+                        </label>
+
+                        <div id="category_selected" class="helper" style="display: none;"></div>
+                        <div id="category_results" class="card" style="display: none; padding: 10px;"></div>
+
+                        <div class="nav" id="category_actions" style="display: none;">
+                            <button type="button" class="button button-secondary" id="clear_category_selection">Bỏ chọn loại ticket</button>
+                        </div>
+                    </div>
+
+                    <div class="stack" style="gap: 12px;">
+                        <input type="hidden" name="requester_contact_method" id="requester_contact_method" value="{{ old('requester_contact_method') }}">
+
+                        <label>
+                            Phương thức liên hệ
+                            <input
+                                type="text"
+                                id="contact_method_search"
+                                value="{{ old('requester_contact_method') }}"
+                                placeholder="Gõ để chọn nhanh hoặc tạo mới phương thức liên hệ"
+                                autocomplete="off"
+                            >
+                            <span class="inline-note">Ví dụ gõ `tele` sẽ hiện `Telegram`. Nếu không có phương thức phù hợp, hệ thống sẽ tự tạo tag mới theo nội dung bạn nhập.</span>
+                        </label>
+
+                        <div id="contact_method_selected" class="helper" style="display: none;"></div>
+                        <div id="contact_method_results" class="card" style="display: none; padding: 10px;"></div>
+
+                        <div class="nav" id="contact_method_actions" style="display: none;">
+                            <button type="button" class="button button-secondary" id="clear_contact_method_selection">Bỏ chọn phương thức</button>
+                        </div>
+                    </div>
                 </div>
 
-                <datalist id="ticket_category_suggestions">
-                    @foreach ($categories as $category)
-                        <option value="{{ $category->name }}"></option>
-                    @endforeach
-                </datalist>
-
-                <datalist id="contact_method_suggestions">
-                    @foreach ($contactMethods as $contactMethod)
-                        <option value="{{ $contactMethod->name }}"></option>
-                    @endforeach
-                </datalist>
+                <label>
+                    Ưu tiên
+                    <select
+                        name="priority"
+                        id="priority"
+                    >
+                        @foreach ($priorities as $priority)
+                            <option value="{{ $priority }}" @selected(old('priority', \App\Models\Ticket::PRIORITY_NORMAL) === $priority)>{{ $priority }}</option>
+                        @endforeach
+                    </select>
+                    <span class="inline-note">Ưu tiên được cố định theo ba mức: Thấp, Bình thường, Cao. Mặc định là Bình thường.</span>
+                </label>
 
                 <label>
                     Mô tả chi tiết
@@ -143,10 +164,41 @@
         </section>
     </main>
 
+    @php
+        $categorySuggestions = $categories
+            ->map(fn ($category) => [
+                'id' => $category->id,
+                'name' => $category->name,
+            ])
+            ->values();
+        $contactMethodSuggestions = $contactMethods
+            ->map(fn ($contactMethod) => [
+                'id' => $contactMethod->id,
+                'name' => $contactMethod->name,
+            ])
+            ->values();
+
+        $initialSelectedCustomer = $selectedCustomer
+            ? [
+                'id' => $selectedCustomer->id,
+                'name' => $selectedCustomer->name,
+                'selected_label' => $selectedCustomer->name,
+                'contact_preview' => collect([
+                    $selectedCustomer->representative_name ? "Đại diện: {$selectedCustomer->representative_name}" : null,
+                    $selectedCustomer->phone ? "SĐT: {$selectedCustomer->phone}" : null,
+                    $selectedCustomer->email ? "Email: {$selectedCustomer->email}" : null,
+                ])->filter()->implode(' | '),
+                'license_preview' => $selectedCustomer->license_count ? (string) $selectedCustomer->license_count : null,
+            ]
+            : null;
+    @endphp
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const customerSearchUrl = {{ \Illuminate\Support\Js::from(route('customers.search')) }};
-            const initialSelectedCustomer = {{ \Illuminate\Support\Js::from($selectedCustomer) }};
+            const categorySuggestions = @js($categorySuggestions);
+            const contactMethodSuggestions = @js($contactMethodSuggestions);
+            const initialSelectedCustomer = @js($initialSelectedCustomer);
+            const customerSearchUrl = @js(route('customers.search'));
             const searchInput = document.getElementById('customer_search');
             const customerIdInput = document.getElementById('customer_id');
             const customerNameInput = document.getElementById('customer_name');
@@ -156,8 +208,30 @@
             const selected = document.getElementById('customer_selected');
             const actions = document.getElementById('customer_actions');
             const clearButton = document.getElementById('clear_customer_selection');
+            const categorySearchInput = document.getElementById('category_search');
+            const categoryNameInput = document.getElementById('category_name');
+            const categoryResults = document.getElementById('category_results');
+            const categorySelected = document.getElementById('category_selected');
+            const categoryActions = document.getElementById('category_actions');
+            const clearCategoryButton = document.getElementById('clear_category_selection');
+            const contactMethodSearchInput = document.getElementById('contact_method_search');
+            const contactMethodInput = document.getElementById('requester_contact_method');
+            const contactMethodResults = document.getElementById('contact_method_results');
+            const contactMethodSelected = document.getElementById('contact_method_selected');
+            const contactMethodActions = document.getElementById('contact_method_actions');
+            const clearContactMethodButton = document.getElementById('clear_contact_method_selection');
             let searchController = null;
             let searchTimer = null;
+            let selectedCategory = null;
+            let selectedContactMethod = null;
+
+            const normalizeText = (value) => value
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/đ/g, 'd')
+                .replace(/Đ/g, 'D')
+                .toLowerCase()
+                .trim();
 
             const setPreviewValue = (element, value) => {
                 if (!element) {
@@ -169,6 +243,24 @@
 
             const oldCustomerId = customerIdInput.value;
             let selectedCustomer = oldCustomerId ? initialSelectedCustomer : null;
+            const initialCategoryValue = categoryNameInput.value.trim();
+            const initialContactMethodValue = contactMethodInput.value.trim();
+
+            if (initialCategoryValue) {
+                const matchedCategory = categorySuggestions.find((category) => normalizeText(category.name) === normalizeText(initialCategoryValue));
+
+                if (matchedCategory) {
+                    selectedCategory = matchedCategory;
+                }
+            }
+
+            if (initialContactMethodValue) {
+                const matchedContactMethod = contactMethodSuggestions.find((contactMethod) => normalizeText(contactMethod.name) === normalizeText(initialContactMethodValue));
+
+                if (matchedContactMethod) {
+                    selectedContactMethod = matchedContactMethod;
+                }
+            }
 
             const setCustomerStateDisabled = (disabled) => {
                 customerNameInput.disabled = disabled;
@@ -227,6 +319,100 @@
                 setCustomerStateDisabled(true);
             };
 
+            const renderCategoryResults = (matches) => {
+                if (!matches.length || selectedCategory) {
+                    categoryResults.style.display = 'none';
+                    categoryResults.innerHTML = '';
+
+                    return;
+                }
+
+                categoryResults.innerHTML = matches.map((category, index) => `
+                    <button type="button" class="search-result" data-category-index="${index}">
+                        <strong>${category.name}</strong>
+                        <span>Loại ticket đã có</span>
+                    </button>
+                `).join('');
+                categoryResults.style.display = 'grid';
+
+                categoryResults.querySelectorAll('[data-category-index]').forEach((button, index) => {
+                    button.addEventListener('click', () => {
+                        selectedCategory = matches[index];
+                        renderSelectedCategory();
+                    });
+                });
+            };
+
+            const renderSelectedCategory = () => {
+                if (!selectedCategory) {
+                    categorySelected.style.display = 'block';
+                    categorySelected.textContent = categorySearchInput.value.trim()
+                        ? 'Sẽ tạo loại ticket mới theo nội dung bạn nhập nếu chưa có loại trùng.'
+                        : 'Gõ để tìm nhanh loại ticket đã có hoặc nhập tên mới.';
+                    categoryActions.style.display = 'none';
+                    categoryResults.style.display = 'none';
+                    categoryResults.innerHTML = '';
+                    categoryNameInput.value = categorySearchInput.value.trim();
+
+                    return;
+                }
+
+                categorySelected.style.display = 'block';
+                categorySelected.textContent = `Đã chọn loại ticket: ${selectedCategory.name}`;
+                categoryActions.style.display = 'flex';
+                categorySearchInput.value = selectedCategory.name;
+                categoryNameInput.value = selectedCategory.name;
+                categoryResults.style.display = 'none';
+                categoryResults.innerHTML = '';
+            };
+
+            const renderContactMethodResults = (matches) => {
+                if (!matches.length || selectedContactMethod) {
+                    contactMethodResults.style.display = 'none';
+                    contactMethodResults.innerHTML = '';
+
+                    return;
+                }
+
+                contactMethodResults.innerHTML = matches.map((contactMethod, index) => `
+                    <button type="button" class="search-result" data-contact-method-index="${index}">
+                        <strong>${contactMethod.name}</strong>
+                        <span>Phương thức liên hệ đã có</span>
+                    </button>
+                `).join('');
+                contactMethodResults.style.display = 'grid';
+
+                contactMethodResults.querySelectorAll('[data-contact-method-index]').forEach((button, index) => {
+                    button.addEventListener('click', () => {
+                        selectedContactMethod = matches[index];
+                        renderSelectedContactMethod();
+                    });
+                });
+            };
+
+            const renderSelectedContactMethod = () => {
+                if (!selectedContactMethod) {
+                    contactMethodSelected.style.display = 'block';
+                    contactMethodSelected.textContent = contactMethodSearchInput.value.trim()
+                        ? 'Sẽ tạo phương thức liên hệ mới theo nội dung bạn nhập nếu chưa có tag trùng.'
+                        : 'Gõ để tìm nhanh phương thức liên hệ đã có hoặc nhập tên mới.';
+                    contactMethodActions.style.display = 'none';
+                    contactMethodResults.style.display = 'none';
+                    contactMethodResults.innerHTML = '';
+                    contactMethodInput.value = contactMethodSearchInput.value.trim();
+
+                    return;
+                }
+
+                contactMethodSelected.style.display = 'block';
+                contactMethodSelected.textContent = `Đã chọn phương thức liên hệ: ${selectedContactMethod.name}`;
+                contactMethodActions.style.display = 'flex';
+                contactMethodSearchInput.value = selectedContactMethod.name;
+                contactMethodInput.value = selectedContactMethod.name;
+                contactMethodResults.style.display = 'none';
+                contactMethodResults.innerHTML = '';
+            };
+
             searchInput.addEventListener('input', () => {
                 if (selectedCustomer) {
                     return;
@@ -274,6 +460,56 @@
                 }, 180);
             });
 
+            categorySearchInput.addEventListener('input', () => {
+                const keyword = categorySearchInput.value.trim();
+
+                if (selectedCategory && normalizeText(keyword) !== normalizeText(selectedCategory.name)) {
+                    selectedCategory = null;
+                }
+
+                categoryNameInput.value = keyword;
+
+                if (!keyword) {
+                    renderCategoryResults([]);
+                    renderSelectedCategory();
+
+                    return;
+                }
+
+                const normalizedKeyword = normalizeText(keyword);
+                const matches = categorySuggestions
+                    .filter((category) => normalizeText(category.name).includes(normalizedKeyword))
+                    .slice(0, 6);
+
+                renderSelectedCategory();
+                renderCategoryResults(matches);
+            });
+
+            contactMethodSearchInput.addEventListener('input', () => {
+                const keyword = contactMethodSearchInput.value.trim();
+
+                if (selectedContactMethod && normalizeText(keyword) !== normalizeText(selectedContactMethod.name)) {
+                    selectedContactMethod = null;
+                }
+
+                contactMethodInput.value = keyword;
+
+                if (!keyword) {
+                    renderContactMethodResults([]);
+                    renderSelectedContactMethod();
+
+                    return;
+                }
+
+                const normalizedKeyword = normalizeText(keyword);
+                const matches = contactMethodSuggestions
+                    .filter((contactMethod) => normalizeText(contactMethod.name).includes(normalizedKeyword))
+                    .slice(0, 6);
+
+                renderSelectedContactMethod();
+                renderContactMethodResults(matches);
+            });
+
             clearButton.addEventListener('click', () => {
                 selectedCustomer = null;
                 searchInput.value = '';
@@ -282,15 +518,45 @@
                 searchInput.focus();
             });
 
+            clearCategoryButton.addEventListener('click', () => {
+                selectedCategory = null;
+                categorySearchInput.value = '';
+                categoryNameInput.value = '';
+                renderSelectedCategory();
+                categorySearchInput.focus();
+            });
+
+            clearContactMethodButton.addEventListener('click', () => {
+                selectedContactMethod = null;
+                contactMethodSearchInput.value = '';
+                contactMethodInput.value = '';
+                renderSelectedContactMethod();
+                contactMethodSearchInput.focus();
+            });
+
             document.addEventListener('click', (event) => {
                 if (results.contains(event.target) || event.target === searchInput) {
                     return;
                 }
 
                 results.style.display = 'none';
+
+                if (categoryResults.contains(event.target) || event.target === categorySearchInput) {
+                    return;
+                }
+
+                categoryResults.style.display = 'none';
+
+                if (contactMethodResults.contains(event.target) || event.target === contactMethodSearchInput) {
+                    return;
+                }
+
+                contactMethodResults.style.display = 'none';
             });
 
             renderSelectedCustomer();
+            renderSelectedCategory();
+            renderSelectedContactMethod();
         });
     </script>
 @endsection
