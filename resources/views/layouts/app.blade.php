@@ -408,8 +408,23 @@
             }
             .pagination nav {
                 display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+                width: 100%;
+                flex-wrap: wrap;
+            }
+            .pagination-summary {
+                margin: 0;
+                color: var(--muted);
+                font-size: 0.92rem;
+                text-align: center;
+            }
+            .pagination-links {
+                display: flex;
                 gap: 8px;
                 flex-wrap: wrap;
+                justify-content: center;
             }
             .pagination span,
             .pagination a {
@@ -417,6 +432,16 @@
                 border-radius: 999px;
                 border: 1px solid var(--line);
                 background: var(--panel-strong);
+            }
+            .pagination span[aria-current="page"] {
+                background: rgba(155, 61, 35, 0.12);
+                border-color: rgba(155, 61, 35, 0.3);
+                color: var(--brand-strong);
+                font-weight: 700;
+            }
+            .pagination span[aria-disabled="true"] {
+                color: var(--muted);
+                opacity: 0.72;
             }
             .simple-row-form {
                 display: grid;
