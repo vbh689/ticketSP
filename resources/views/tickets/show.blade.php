@@ -16,6 +16,7 @@
             <div class="nav">
                 @if (! $isReadOnly)
                     @if (auth()->user()?->is_manager)
+                        <a class="button button-muted" href="{{ route('customers.index') }}">Khách hàng</a>
                         <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
                     @endif
                     <a class="button button-muted" href="{{ route('tickets.index') }}">Quay lại backlog</a>

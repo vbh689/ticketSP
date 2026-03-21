@@ -15,6 +15,7 @@
 
             <div class="nav">
                 @if (auth()->user()?->is_manager)
+                    <a class="button button-muted" href="{{ route('customers.index') }}">Khách hàng</a>
                     <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
                 @endif
                 <a class="button button-primary" href="{{ route('tickets.create') }}">Tạo ticket</a>
