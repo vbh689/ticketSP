@@ -529,6 +529,7 @@ class TicketManagementTest extends TestCase
 
         $this->assertStringContainsString('Mã ticket', $content);
         $this->assertStringContainsString('Thời gian resolved', $content);
+        $this->assertStringContainsString('Thông tin khách hàng', $content);
         $this->assertStringContainsString('Nam trong 7 ngay', $content);
         $this->assertStringContainsString('Moc 7 ngay', $content);
         $this->assertStringNotContainsString('Qua 7 ngay', $content);

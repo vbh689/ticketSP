@@ -77,7 +77,7 @@ class TicketController extends Controller
                 'Ưu tiên',
                 'Loại ticket',
                 'Khách hàng',
-                'Liên hệ',
+                'Thông tin khách hàng',
                 'Phương thức liên hệ',
                 'Tiêu đề',
                 'Mô tả',
