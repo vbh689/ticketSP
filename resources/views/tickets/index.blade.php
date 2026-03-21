@@ -14,6 +14,11 @@
             </div>
 
             <div class="nav">
+                @if (auth()->user()?->is_manager)
+                    <a class="button button-muted" href="{{ route('admin.tags.index') }}">Tags</a>
+                    <a class="button button-muted" href="{{ route('customers.index') }}">Khách hàng</a>
+                    <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
+                @endif
                 <a class="button button-primary" href="{{ route('tickets.create') }}">Tạo ticket</a>
                 <form method="POST" action="{{ route('logout') }}" class="inline-form">
                     @csrf
@@ -65,7 +70,8 @@
             <form method="GET" action="{{ route('tickets.index') }}" class="toolbar">
                 <label>
                     Tìm kiếm
-                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="IT-000001, VPN, tên người dùng">
+                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="TK-260320-001, VPN, tên người dùng">
+                    <!-- <span class="inline-note">Hỗ trợ gõ gần đúng, prefix matching và một số lỗi typo phổ biến.</span> -->
                 </label>
 
                 <label>
@@ -99,6 +105,15 @@
                     </select>
                 </label>
 
+                <label>
+                    Số ticket mỗi trang
+                    <select name="per_page">
+                        @foreach (\App\Support\Search\TicketSearchService::perPageOptions() as $perPageOption)
+                            <option value="{{ $perPageOption }}" @selected((int) ($filters['per_page'] ?? \App\Support\Search\TicketSearchService::DEFAULT_PER_PAGE) === $perPageOption)>{{ $perPageOption }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
                 <div class="toolbar-actions">
                     <button class="button-primary" type="submit">Áp dụng</button>
                     <a class="button button-muted" href="{{ route('tickets.index') }}">Xóa lọc</a>
@@ -107,50 +122,98 @@
         </section>
 
         <section class="card panel">
+            <form method="POST" action="{{ route('tickets.bulk-status.update') }}" class="stack" id="bulk-status-form">
+                @csrf
+                @method('PATCH')
+            </form>
+
+            <div class="toolbar">
+                <label class="toolbar-wide">
+                    Thao tác nhanh cho ticket đã chọn
+                    <select name="status" form="bulk-status-form" required>
+                        <option value="">Chọn trạng thái cần cập nhật</option>
+                        @foreach ($statuses as $status)
+                            <option value="{{ $status }}">{{ $status }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <div class="toolbar-actions">
+                    <button class="button-primary" type="submit" form="bulk-status-form">Cập nhật hàng loạt</button>
+                </div>
+            </div>
+
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" class="checkbox-input" data-select-all aria-label="Chọn tất cả ticket">
+                            </th>
                             <th>Mã ticket</th>
                             <th>Nội dung</th>
-                            <th>Requester</th>
+                            <th>Khách hàng</th>
                             <th>Loại</th>
-                            <th>Phụ trách</th>
+                            <th>Người phụ trách</th>
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($tickets as $ticket)
+                            @php($relatedHandlers = $ticket->relatedHandlers())
                             <tr>
+                                <td class="checkbox-cell">
+                                    <input type="checkbox" class="checkbox-input" name="ticket_ids[]" value="{{ $ticket->id }}" form="bulk-status-form" aria-label="Chọn ticket {{ $ticket->ticket_code }}">
+                                </td>
                                 <td>
-                                    <strong>{{ $ticket->ticket_code }}</strong>
+                                    <strong>{!! $ticket->highlighted_ticket_code ?? e($ticket->ticket_code) !!}</strong>
                                     <div class="meta">{{ $ticket->created_at->format('d/m/Y H:i') }}</div>
                                 </td>
                                 <td>
-                                    <a href="{{ route('tickets.show', $ticket) }}"><strong>{{ $ticket->title }}</strong></a>
+                                    <a href="{{ route('tickets.show', $ticket) }}"><strong>{!! $ticket->highlighted_title ?? e($ticket->title) !!}</strong></a>
                                     <div class="meta">{{ \Illuminate\Support\Str::limit($ticket->description, 90) }}</div>
                                 </td>
                                 <td>
-                                    <strong>{{ $ticket->requester_name }}</strong>
-                                    <div class="meta">{{ $ticket->requester_contact ?: 'Chưa có liên hệ' }}</div>
-                                </td>
-                                <td>{{ $ticket->category->name }}</td>
-                                <td>{{ $ticket->assignee?->name ?? 'Chưa có người nhận' }}</td>
-                                <td>@include('tickets.partials.status-badge', ['status' => $ticket->status])</td>
-                                <td class="nav">
-                                    <a class="button button-muted" href="{{ route('tickets.show', $ticket) }}">Chi tiết</a>
-                                    @if (! $ticket->assignee_id)
-                                        <form method="POST" action="{{ route('tickets.claim', $ticket) }}" class="inline-form">
-                                            @csrf
-                                            <button class="button-primary" type="submit">Nhận ticket</button>
-                                        </form>
+                                    <strong>{!! $ticket->highlighted_requester_name ?? e($ticket->requester_name) !!}</strong>
+                                    @if ($ticket->requester_contact_method)
+                                        <div class="inline-note">Phương thức: {{ $ticket->requester_contact_method }}</div>
                                     @endif
+                                    <div class="meta">{!! $ticket->highlighted_requester_contact ?? e($ticket->requester_contact ?: 'Chưa có liên hệ') !!}</div>
+                                </td>
+                                <td>
+                                    {{ $ticket->category->name }}
+                                    @if ($ticket->priority)
+                                        <div class="inline-note">Ưu tiên: {{ $ticket->priority }}</div>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($relatedHandlers->isNotEmpty())
+                                        <div class="people-list">
+                                            @foreach ($relatedHandlers as $handler)
+                                                <span class="person-chip">{{ $handler->display_name }}</span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="person-chip person-chip-muted">Chưa có người xử lý</span>
+                                    @endif
+                                </td>
+                                <td>@include('tickets.partials.status-badge', ['status' => $ticket->status])</td>
+                                <td>
+                                    <div class="ticket-actions">
+                                        <a class="button button-muted" href="{{ route('tickets.show', $ticket) }}">Chi tiết</a>
+                                        @if (! $ticket->assignee_id)
+                                            <form method="POST" action="{{ route('tickets.claim', $ticket) }}" class="inline-form">
+                                                @csrf
+                                                <button class="button-primary" type="submit">Nhận ticket</button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="empty">Chưa có ticket nào khớp với bộ lọc hiện tại.</td>
+                                <td colspan="8" class="empty">Chưa có ticket nào khớp với bộ lọc hiện tại.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -158,6 +221,113 @@
             </div>
 
             <div class="pagination">{{ $tickets->links() }}</div>
+
+            <div class="export-panel">
+                <div>
+                    <h3 class="section-title">Xuất CSV ticket</h3>
+                    <p class="section-copy">Tải nhanh danh sách ticket theo mốc thời gian tạo để tổng hợp hoặc gửi nội bộ.</p>
+                </div>
+
+                <div class="export-actions">
+                    @foreach ($exportPeriods as $periodValue => $period)
+                        <button
+                            class="button button-muted"
+                            type="button"
+                            data-export-url="{{ route('tickets.export', ['period' => $periodValue]) }}"
+                            data-export-filename="tickets-{{ $period['slug'] }}.csv"
+                        >
+                            {{ $period['label'] }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
         </section>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const selectAll = document.querySelector('[data-select-all]');
+
+                if (! selectAll) {
+                    return;
+                }
+
+                const checkboxes = Array.from(document.querySelectorAll('input[name="ticket_ids[]"]'));
+
+                selectAll.addEventListener('change', () => {
+                    checkboxes.forEach((checkbox) => {
+                        checkbox.checked = selectAll.checked;
+                    });
+                });
+
+                const exportButtons = Array.from(document.querySelectorAll('[data-export-url]'));
+
+                const parseFilename = (headerValue, fallback) => {
+                    if (! headerValue) {
+                        return fallback;
+                    }
+
+                    const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+
+                    if (utf8Match) {
+                        return decodeURIComponent(utf8Match[1]);
+                    }
+
+                    const asciiMatch = headerValue.match(/filename=\"?([^\";]+)\"?/i);
+
+                    return asciiMatch ? asciiMatch[1] : fallback;
+                };
+
+                exportButtons.forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const exportUrl = button.dataset.exportUrl;
+                        const fallbackFilename = button.dataset.exportFilename || 'tickets-export.csv';
+
+                        if (! exportUrl) {
+                            return;
+                        }
+
+                        const originalLabel = button.textContent;
+                        button.disabled = true;
+                        button.textContent = 'Đang tải...';
+
+                        try {
+                            const response = await fetch(exportUrl, {
+                                credentials: 'same-origin',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            });
+
+                            if (! response.ok) {
+                                throw new Error('Export failed');
+                            }
+
+                            const filename = parseFilename(
+                                response.headers.get('Content-Disposition'),
+                                fallbackFilename
+                            );
+                            const blob = await response.blob();
+                            const blobUrl = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+
+                            link.href = blobUrl;
+                            link.download = filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                            window.URL.revokeObjectURL(blobUrl);
+                        } catch (error) {
+                            window.location.assign(exportUrl);
+                        } finally {
+                            button.disabled = false;
+                            button.textContent = originalLabel;
+                        }
+                    });
+                });
+            });
+        </script>
+        
+        @include('partials.search-rebuild')
+
     </main>
 @endsection

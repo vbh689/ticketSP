@@ -8,21 +8,36 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Laravel\Scout\Searchable;
 
 class Ticket extends Model
 {
     public const STATUS_OPEN = 'Open';
+
     public const STATUS_IN_PROGRESS = 'In Progress';
+
     public const STATUS_RESOLVED = 'Resolved';
+
     public const STATUS_CLOSED = 'Closed';
 
+    public const PRIORITY_LOW = 'Thấp';
+
+    public const PRIORITY_NORMAL = 'Bình thường';
+
+    public const PRIORITY_HIGH = 'Cao';
+
     /** @use HasFactory<TicketFactory> */
-    use HasFactory;
+    use HasFactory, Searchable;
 
     protected $fillable = [
+        'customer_id',
         'requester_name',
         'requester_contact',
+        'requester_contact_method',
+        'priority',
         'title',
         'description',
         'category_id',
@@ -55,11 +70,25 @@ class Ticket extends Model
 
         static::created(function (Ticket $ticket): void {
             if (! $ticket->ticket_code) {
-                $ticket->updateQuietly([
-                    'ticket_code' => sprintf('IT-%06d', $ticket->id),
-                ]);
+                $ticket->forceFill([
+                    'ticket_code' => self::generateTicketCode($ticket),
+                ])->saveQuietly();
             }
         });
+    }
+
+    private static function generateTicketCode(Ticket $ticket): string
+    {
+        $createdAt = $ticket->created_at instanceof Carbon
+            ? $ticket->created_at
+            : Carbon::parse($ticket->created_at ?? now());
+
+        $dailySequence = self::query()
+            ->whereDate('created_at', $createdAt->toDateString())
+            ->where('id', '<=', $ticket->id)
+            ->count();
+
+        return sprintf('TK-%s-%03d', $createdAt->format('ymd'), $dailySequence);
     }
 
     public static function statuses(): array
@@ -72,17 +101,21 @@ class Ticket extends Model
         ];
     }
 
+    /**
+     * @return list<string>
+     */
+    public static function priorities(): array
+    {
+        return [
+            self::PRIORITY_LOW,
+            self::PRIORITY_NORMAL,
+            self::PRIORITY_HIGH,
+        ];
+    }
+
     public function scopeFilter(Builder $query, array $filters): Builder
     {
         return $query
-            ->when($filters['search'] ?? null, function (Builder $builder, string $search): void {
-                $builder->where(function (Builder $nested) use ($search): void {
-                    $nested
-                        ->where('ticket_code', 'like', "%{$search}%")
-                        ->orWhere('title', 'like', "%{$search}%")
-                        ->orWhere('requester_name', 'like', "%{$search}%");
-                });
-            })
             ->when($filters['status'] ?? null, fn (Builder $builder, string $status) => $builder->where('status', $status))
             ->when($filters['category_id'] ?? null, fn (Builder $builder, string $categoryId) => $builder->where('category_id', $categoryId))
             ->when($filters['assignee_id'] ?? null, function (Builder $builder, string $assigneeId): void {
@@ -99,6 +132,11 @@ class Ticket extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(TicketCategory::class, 'category_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function creator(): BelongsTo
@@ -119,5 +157,58 @@ class Ticket extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(TicketActivity::class)->latest();
+    }
+
+    public function relatedHandlers(): Collection
+    {
+        $users = collect();
+
+        if ($this->relationLoaded('assignee') && $this->assignee) {
+            $users->push($this->assignee);
+        } elseif ($this->assignee_id) {
+            $users->push($this->assignee()->first());
+        }
+
+        $activities = $this->relationLoaded('activities')
+            ? $this->activities
+            : $this->activities()->with('actor')->get();
+
+        return $users
+            ->merge(
+                $activities
+                    ->whereIn('action_type', ['ticket_claimed', 'comment_added', 'status_changed'])
+                    ->pluck('actor')
+                    ->filter()
+            )
+            ->unique('id')
+            ->values();
+    }
+
+    public function searchableAs(): string
+    {
+        return 'tickets';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => (int) $this->id,
+            'ticket_code' => $this->ticket_code,
+            'title' => $this->title,
+            'requester_name' => $this->requester_name,
+            'requester_contact' => $this->requester_contact,
+            'requester_contact_method' => $this->requester_contact_method,
+            'priority' => $this->priority,
+            'description' => $this->description,
+            'category_id' => $this->category_id,
+            'category_name' => $this->category?->name,
+            'status' => $this->status,
+            'assignee_id' => $this->assignee_id,
+            'created_by' => $this->created_by,
+            'created_at_timestamp' => $this->created_at?->timestamp ?? now()->timestamp,
+        ];
     }
 }

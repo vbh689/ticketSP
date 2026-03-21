@@ -19,6 +19,8 @@ class TicketFactory extends Factory
         return [
             'requester_name' => fake()->name(),
             'requester_contact' => fake()->safeEmail(),
+            'requester_contact_method' => fake()->randomElement(['Email', 'Phone', 'Telegram']),
+            'priority' => fake()->randomElement(\App\Models\Ticket::priorities()),
             'title' => fake()->sentence(4),
             'description' => fake()->paragraph(),
             'category_id' => TicketCategory::factory(),

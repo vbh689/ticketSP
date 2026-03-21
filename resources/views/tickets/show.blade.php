@@ -15,6 +15,10 @@
 
             <div class="nav">
                 @if (! $isReadOnly)
+                    <!-- @if (auth()->user()?->is_manager)
+                        <a class="button button-muted" href="{{ route('customers.index') }}">Khách hàng</a>
+                        <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
+                    @endif -->
                     <a class="button button-muted" href="{{ route('tickets.index') }}">Quay lại backlog</a>
                 @endif
             </div>
@@ -43,13 +47,19 @@
 
                 <div class="grid grid-2">
                     <div>
-                        <div class="meta">Requester</div>
+                        <div class="meta">Khách hàng</div>
                         <strong>{{ $ticket->requester_name }}</strong>
+                        @if ($ticket->requester_contact_method)
+                            <div class="inline-note">Phương thức liên hệ: {{ $ticket->requester_contact_method }}</div>
+                        @endif
                         <div>{{ $ticket->requester_contact ?: 'Chưa có thông tin liên hệ' }}</div>
                     </div>
                     <div>
                         <div class="meta">Loại ticket</div>
                         <strong>{{ $ticket->category->name }}</strong>
+                        @if ($ticket->priority)
+                            <div class="inline-note">Ưu tiên: {{ $ticket->priority }}</div>
+                        @endif
                     </div>
                     <div>
                         <div class="meta">Người tạo</div>
@@ -57,15 +67,38 @@
                     </div>
                     <div>
                         <div class="meta">Người phụ trách</div>
-                        <strong>{{ $ticket->assignee?->name ?? 'Chưa có người nhận' }}</strong>
+                        @php($relatedHandlers = $ticket->relatedHandlers())
+                        @if ($relatedHandlers->isNotEmpty())
+                            <div class="people-list">
+                                @foreach ($relatedHandlers as $handler)
+                                    <span class="person-chip">{{ $handler->display_name }}</span>
+                                @endforeach
+                            </div>
+                            @if ($ticket->assignee)
+                                <div class="inline-note">Phụ trách chính: {{ $ticket->assignee->display_name }}</div>
+                            @endif
+                        @else
+                            <strong>Chưa có người nhận</strong>
+                        @endif
                     </div>
                     <div>
                         <div class="meta">Trạng thái</div>
                         @include('tickets.partials.status-badge', ['status' => $ticket->status])
                     </div>
                     <div>
-                        <div class="meta">Link chia sẻ read-only</div>
-                        <a href="{{ $shareUrl }}">{{ $shareUrl }}</a>
+                        <div class="meta">Chia sẻ link</div>
+                        <div class="copy-share">
+                            <button
+                                type="button"
+                                class="button button-secondary"
+                                data-copy-text="{{ $shareUrl }}"
+                                data-copy-default="Copy link"
+                                data-copy-success="Đã copy"
+                            >
+                                Copy link
+                            </button>
+                        </div>
+                        <!-- <div class="inline-note">Dùng nút copy để chia sẻ link xem read-only cho khách hàng.</div> -->
                     </div>
                 </div>
 
@@ -160,7 +193,12 @@
                         <article class="activity">
                             <strong>{{ $activity->action_detail }}</strong>
                             <div class="meta">
-                                {{ $activity->actor?->name ?? 'Hệ thống' }} · {{ $activity->created_at->format('d/m/Y H:i') }}
+                                @if ($activity->actor)
+                                    {{ $activity->actor->display_name }} · {{ $activity->actor->username }}
+                                @else
+                                    Hệ thống
+                                @endif
+                                · {{ $activity->created_at->format('d/m/Y H:i') }}
                             </div>
                         </article>
                     @empty
@@ -169,5 +207,31 @@
                 </div>
             </article>
         </section>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const copyButton = document.querySelector('[data-copy-text]');
+
+                if (! copyButton) {
+                    return;
+                }
+
+                copyButton.addEventListener('click', async () => {
+                    const defaultText = copyButton.dataset.copyDefault || 'Copy';
+                    const successText = copyButton.dataset.copySuccess || 'Copied';
+
+                    try {
+                        await navigator.clipboard.writeText(copyButton.dataset.copyText || '');
+                        copyButton.textContent = successText;
+                    } catch (error) {
+                        copyButton.textContent = 'Không thể copy';
+                    }
+
+                    window.setTimeout(() => {
+                        copyButton.textContent = defaultText;
+                    }, 1600);
+                });
+            });
+        </script>
     </main>
 @endsection

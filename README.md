@@ -1,59 +1,148 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ticketSP
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Ứng dụng quản lý ticket nội bộ cho đội IT support.
 
-## About Laravel
+## Phạm vi hiện tại
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Đăng nhập bằng tài khoản nội bộ đơn giản.
+- Tạo ticket mới hộ người dùng.
+- Theo dõi backlog chung với tìm kiếm và bộ lọc cơ bản.
+- Nhận ticket về xử lý.
+- Cập nhật trạng thái `Open`, `In Progress`, `Resolved`, `Closed`.
+- Thêm ghi chú xử lý và lưu activity log.
+- Chia sẻ link xem ticket read-only bằng `view_key`.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Laravel 12
+- Blade server-rendered UI
+- MySQL cho môi trường triển khai chính
+- PHPUnit cho test nghiệp vụ
 
-## Learning Laravel
+`phpunit.xml` vẫn dùng SQLite in-memory để test chạy nhanh và độc lập.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Cài đặt nhanh
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. Cài dependency:
 
-## Laravel Sponsors
+```bash
+composer install
+npm install
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+2. Tạo file môi trường:
 
-### Premium Partners
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+3. Cập nhật cấu hình database trong `.env`.
 
-## Contributing
+Mặc định `.env.example` đang để MySQL theo định hướng kỹ thuật của dự án. Nếu cần chạy local thật nhanh, bạn có thể đổi sang SQLite.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+4. Chạy migration và seed:
 
-## Code of Conduct
+```bash
+php artisan migrate:fresh --seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Nếu muốn import thêm dữ liệu demo từ file CSV `docs/SupportTickets_Demo.csv`, chạy thêm:
 
-## Security Vulnerabilities
+```bash
+php artisan db:seed --class=SupportTicketsDemoSeeder
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+5. Khởi động ứng dụng:
 
-## License
+```bash
+composer run dev
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Hoặc nếu chỉ cần backend:
+
+```bash
+php artisan serve
+```
+
+## Tài khoản seed mẫu
+
+Sau khi chạy `php artisan migrate:fresh --seed`, có thể đăng nhập bằng:
+
+- `support.lead@internal.local` / `password`
+- `support.agent@internal.local` / `password`
+
+## Seeders
+
+- `DatabaseSeeder`:
+  seed dữ liệu nền cho hệ thống, gồm tài khoản nội bộ mẫu, loại ticket cơ bản, phương thức liên hệ mẫu và một vài ticket demo nhỏ để kiểm tra nhanh.
+- `SupportTicketsDemoSeeder`:
+  import dataset demo từ [docs/SupportTickets_Demo.csv](/Applications/MAMP/htdocs/ticketSP/docs/SupportTickets_Demo.csv). Khi import:
+  `Loại ticket` luôn được cố định là `Phần mềm`, cột `Thời lượng xử lý` bị bỏ qua, và ticket được map sang trạng thái nội bộ của hệ thống.
+
+Lệnh thường dùng:
+
+```bash
+php artisan migrate:fresh --seed
+php artisan db:seed --class=SupportTicketsDemoSeeder
+```
+
+## Lệnh hữu ích
+
+```bash
+php artisan test
+php artisan migrate:fresh --seed
+php artisan route:list
+```
+
+## Meilisearch Local
+
+Tìm kiếm khách hàng và ticket đã sẵn sàng để dùng `Meilisearch` qua `Laravel Scout`, nhưng vẫn fallback về DB search nếu search service chưa chạy.
+
+1. Khởi động Meilisearch:
+
+```bash
+docker compose -f docker-compose.meilisearch.yml up -d
+```
+
+2. Cập nhật `.env`:
+
+```bash
+SCOUT_DRIVER=meilisearch
+SCOUT_QUEUE=true
+MEILISEARCH_HOST=http://127.0.0.1:7700
+MEILISEARCH_KEY=ticketsp-master-key
+```
+
+3. Đồng bộ index settings và import dữ liệu:
+
+```bash
+php artisan scout:sync-index-settings
+php artisan scout:import "App\\Models\\Customer"
+php artisan scout:import "App\\Models\\Ticket"
+```
+
+## Cấu trúc chính
+
+- `app/Http/Controllers/`:
+  luồng đăng nhập, danh sách ticket, chi tiết ticket, ghi chú xử lý.
+- `app/Models/`:
+  `Ticket`, `TicketCategory`, `TicketComment`, `TicketActivity`, `User`.
+- `database/migrations/`:
+  schema cho auth, backlog, comment và activity log.
+- `resources/views/`:
+  giao diện Blade cho login, backlog, tạo ticket và chi tiết ticket.
+- `tests/Feature/`:
+  test bám theo `docs/test-plan.md`.
+
+## Tài liệu nghiệp vụ
+
+Đọc theo thứ tự:
+
+1. [`docs/README.md`](./docs/README.md)
+2. [`docs/product-overview.md`](./docs/product-overview.md)
+3. [`docs/workflows.md`](./docs/workflows.md)
+4. [`docs/data-model.md`](./docs/data-model.md)
+5. [`docs/screens-and-features.md`](./docs/screens-and-features.md)
+6. [`docs/technical-direction.md`](./docs/technical-direction.md)
+7. [`docs/test-plan.md`](./docs/test-plan.md)

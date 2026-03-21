@@ -13,6 +13,15 @@ class AuthController extends Controller
     public function create(): View|RedirectResponse
     {
         if (Auth::check()) {
+            if (! Auth::user()->is_active) {
+                Auth::logout();
+
+                request()->session()->invalidate();
+                request()->session()->regenerateToken();
+
+                return view('auth.login');
+            }
+
             return redirect()->route('tickets.index');
         }
 
@@ -25,18 +34,23 @@ class AuthController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'login' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ], [], [
-            'email' => 'email',
+            'login' => 'email hoặc username',
             'password' => 'mật khẩu',
         ]);
 
-        $credentials['status'] = 'active';
+        $login = $credentials['login'];
+        $attemptCredentials = [
+            filter_var($login, FILTER_VALIDATE_EMAIL) ? 'email' : 'username' => $login,
+            'password' => $credentials['password'],
+            'is_active' => true,
+        ];
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        if (! Auth::attempt($attemptCredentials, $request->boolean('remember'))) {
             throw ValidationException::withMessages([
-                'email' => 'Thông tin đăng nhập không chính xác hoặc tài khoản đã bị khóa.',
+                'login' => 'Thông tin đăng nhập không chính xác hoặc tài khoản đã bị khóa.',
             ]);
         }
 
