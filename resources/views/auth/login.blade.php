@@ -24,8 +24,8 @@
                 @csrf
 
                 <label>
-                    Email nội bộ
-                    <input type="email" name="email" value="{{ old('email') }}" required autofocus>
+                    Email hoặc username
+                    <input type="text" name="login" value="{{ old('login') }}" required autofocus>
                 </label>
 
                 <label>

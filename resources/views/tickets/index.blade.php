@@ -14,7 +14,9 @@
             </div>
 
             <div class="nav">
-                <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
+                @if (auth()->user()?->is_manager)
+                    <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
+                @endif
                 <a class="button button-primary" href="{{ route('tickets.create') }}">Tạo ticket</a>
                 <form method="POST" action="{{ route('logout') }}" class="inline-form">
                     @csrf
@@ -138,7 +140,7 @@
                             </th>
                             <th>Mã ticket</th>
                             <th>Nội dung</th>
-                            <th>Requester</th>
+                            <th>Khách hàng</th>
                             <th>Loại</th>
                             <th>Người phụ trách</th>
                             <th>Trạng thái</th>

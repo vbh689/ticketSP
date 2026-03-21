@@ -30,6 +30,7 @@ class TicketManagementTest extends TestCase
         $response->assertRedirect(route('tickets.show', $ticket));
         $this->assertDatabaseHas('tickets', [
             'id' => $ticket->id,
+            'ticket_code' => sprintf('IT-%06d', $ticket->id),
             'status' => Ticket::STATUS_OPEN,
             'assignee_id' => null,
             'created_by' => $support->id,
@@ -120,7 +121,12 @@ class TicketManagementTest extends TestCase
 
     public function test_support_can_add_comment_and_public_view_key_is_read_only(): void
     {
-        $support = User::factory()->create();
+        $support = User::factory()->create([
+            'name' => 'Tran Support',
+            'username' => 'tran.support',
+            'email' => 'tran.support@internal.local',
+            'is_active' => true,
+        ]);
         $ticket = Ticket::factory()->create([
             'created_by' => $support->id,
         ]);
@@ -140,8 +146,52 @@ class TicketManagementTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Chế độ xem read-only');
+        $response->assertSee('Copy link');
         $response->assertDontSee('name="content"', false);
         $response->assertDontSee('Nhận ticket này');
+    }
+
+    public function test_ticket_detail_shows_actor_name_and_username_in_activity_history(): void
+    {
+        $support = User::factory()->create([
+            'name' => 'Le Operator',
+            'username' => 'le.operator',
+            'email' => 'le.operator@internal.local',
+            'is_active' => true,
+        ]);
+        $ticket = Ticket::factory()->create([
+            'created_by' => $support->id,
+        ]);
+
+        $this->actingAs($support)->patch(route('tickets.status.update', $ticket), [
+            'status' => Ticket::STATUS_IN_PROGRESS,
+        ])->assertRedirect();
+
+        $response = $this->actingAs($support)->get(route('tickets.show', $ticket));
+
+        $response->assertOk();
+        $response->assertSee('Khách hàng');
+        $response->assertSee('le.operator');
+        $response->assertDontSee('le.operator@internal.local');
+    }
+
+    public function test_inactive_user_cannot_interact_with_ticket_routes(): void
+    {
+        $support = User::factory()->create([
+            'is_active' => false,
+            'status' => 'inactive',
+        ]);
+        $ticket = Ticket::factory()->create();
+
+        $this->actingAs($support)
+            ->post(route('tickets.comments.store', $ticket), ['content' => 'Should fail'])
+            ->assertRedirect(route('login'));
+
+        $this->assertGuest();
+        $this->assertDatabaseMissing('ticket_comments', [
+            'ticket_id' => $ticket->id,
+            'content' => 'Should fail',
+        ]);
     }
 
     public function test_support_can_bulk_update_selected_tickets_to_resolved(): void

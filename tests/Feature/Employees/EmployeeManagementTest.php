@@ -12,7 +12,7 @@ class EmployeeManagementTest extends TestCase
 
     public function test_support_can_create_and_update_employee_profile(): void
     {
-        $support = User::factory()->create();
+        $support = User::factory()->create(['is_manager' => true]);
 
         $this->actingAs($support)->post(route('employees.store'), [
             'email' => 'new.agent@internal.local',
@@ -21,7 +21,8 @@ class EmployeeManagementTest extends TestCase
             'phone' => '0909888777',
             'department' => 'IT Support',
             'primary_contact_method' => 'Telegram',
-            'status' => 'active',
+            'is_manager' => '0',
+            'is_active' => '1',
             'password' => 'password123',
         ])->assertRedirect(route('employees.index'));
 
@@ -32,6 +33,8 @@ class EmployeeManagementTest extends TestCase
             'username' => 'new.agent',
             'department' => 'IT Support',
             'primary_contact_method' => 'Telegram',
+            'is_manager' => 0,
+            'is_active' => 1,
         ]);
 
         $this->actingAs($support)->patch(route('employees.update', $employee), [
@@ -41,7 +44,8 @@ class EmployeeManagementTest extends TestCase
             'phone' => '0909777666',
             'department' => 'Infrastructure',
             'primary_contact_method' => 'Phone',
-            'status' => 'inactive',
+            'is_manager' => '1',
+            'is_active' => '0',
             'password' => '',
         ])->assertRedirect(route('employees.index'));
 
@@ -51,13 +55,15 @@ class EmployeeManagementTest extends TestCase
             'phone' => '0909777666',
             'department' => 'Infrastructure',
             'primary_contact_method' => 'Phone',
+            'is_manager' => 1,
+            'is_active' => 0,
             'status' => 'inactive',
         ]);
     }
 
     public function test_employee_index_displays_extended_profile_fields(): void
     {
-        $support = User::factory()->create();
+        $support = User::factory()->create(['is_manager' => true]);
         $employee = User::factory()->create([
             'email' => 'viewer.agent@internal.local',
             'username' => 'viewer.agent',
@@ -65,6 +71,8 @@ class EmployeeManagementTest extends TestCase
             'phone' => '0911222333',
             'department' => 'Helpdesk',
             'primary_contact_method' => 'Telegram',
+            'is_manager' => true,
+            'is_active' => false,
         ]);
 
         $response = $this->actingAs($support)->get(route('employees.index'));
@@ -76,5 +84,14 @@ class EmployeeManagementTest extends TestCase
         $response->assertSee($employee->phone);
         $response->assertSee($employee->department);
         $response->assertSee($employee->primary_contact_method);
+        $response->assertSee('Manager');
+        $response->assertSee('Đã nghỉ');
+    }
+
+    public function test_non_manager_cannot_access_employee_management(): void
+    {
+        $support = User::factory()->create(['is_manager' => false]);
+
+        $this->actingAs($support)->get(route('employees.index'))->assertForbidden();
     }
 }

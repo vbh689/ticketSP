@@ -73,7 +73,8 @@ class EmployeeController extends Controller
             'phone' => ['nullable', 'string', 'max:255'],
             'department' => ['nullable', 'string', 'max:255'],
             'primary_contact_method' => ['nullable', 'string', Rule::in($this->contactMethods())],
-            'status' => ['required', Rule::in(['active', 'inactive'])],
+            'is_manager' => ['nullable', 'boolean'],
+            'is_active' => ['nullable', 'boolean'],
             'password' => [$employee ? 'nullable' : 'required', 'string', 'min:8'],
         ], [], [
             'email' => 'email',
@@ -82,9 +83,14 @@ class EmployeeController extends Controller
             'phone' => 'số điện thoại',
             'department' => 'phòng ban',
             'primary_contact_method' => 'phương thức liên lạc chính',
-            'status' => 'trạng thái',
+            'is_manager' => 'quyền quản lý',
+            'is_active' => 'trạng thái hoạt động',
             'password' => 'mật khẩu',
         ]);
+
+        $validated['is_manager'] = $request->boolean('is_manager');
+        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['status'] = $validated['is_active'] ? 'active' : 'inactive';
 
         if (! ($validated['password'] ?? null)) {
             unset($validated['password']);

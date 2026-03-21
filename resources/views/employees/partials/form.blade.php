@@ -41,10 +41,18 @@
     </label>
 
     <label>
-        Trạng thái
-        <select name="status">
-            <option value="active" @selected(old('status', $employee->status ?: 'active') === 'active')>Active</option>
-            <option value="inactive" @selected(old('status', $employee->status) === 'inactive')>Inactive</option>
+        Quyền
+        <select name="is_manager">
+            <option value="0" @selected(! old('is_manager', $employee->is_manager))>Nhân viên</option>
+            <option value="1" @selected((bool) old('is_manager', $employee->is_manager))>Manager</option>
+        </select>
+    </label>
+
+    <label>
+        Trạng thái hoạt động
+        <select name="is_active">
+            <option value="1" @selected((bool) old('is_active', $employee->exists ? $employee->is_active : true))>Đang làm việc</option>
+            <option value="0" @selected(! (bool) old('is_active', $employee->exists ? $employee->is_active : true))>Đã nghỉ</option>
         </select>
     </label>
 

@@ -311,6 +311,12 @@
                 color: var(--muted);
                 font-size: 0.88rem;
             }
+            .copy-share {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+            }
             .login-shell {
                 min-height: 100vh;
                 display: grid;

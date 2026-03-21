@@ -43,6 +43,7 @@
                             <th>Số điện thoại</th>
                             <th>Phòng ban</th>
                             <th>Liên lạc chính</th>
+                            <th>Quyền</th>
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
@@ -57,8 +58,13 @@
                                 <td>{{ $employee->department ?: 'Chưa cập nhật' }}</td>
                                 <td>{{ $employee->primary_contact_method ?: 'Chưa cập nhật' }}</td>
                                 <td>
-                                    <span class="badge {{ $employee->status === 'active' ? 'badge-progress' : 'badge-closed' }}">
-                                        {{ $employee->status === 'active' ? 'Active' : 'Inactive' }}
+                                    <span class="badge {{ $employee->is_manager ? 'badge-resolved' : 'badge-open' }}">
+                                        {{ $employee->is_manager ? 'Manager' : 'Nhân viên' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {{ $employee->is_active ? 'badge-progress' : 'badge-closed' }}">
+                                        {{ $employee->is_active ? 'Đang làm việc' : 'Đã nghỉ' }}
                                     </span>
                                 </td>
                                 <td>
@@ -67,7 +73,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="empty">Chưa có nhân viên nào trong danh sách.</td>
+                                <td colspan="9" class="empty">Chưa có nhân viên nào trong danh sách.</td>
                             </tr>
                         @endforelse
                     </tbody>

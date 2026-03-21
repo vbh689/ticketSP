@@ -56,9 +56,9 @@ class Ticket extends Model
 
         static::created(function (Ticket $ticket): void {
             if (! $ticket->ticket_code) {
-                $ticket->updateQuietly([
+                $ticket->forceFill([
                     'ticket_code' => sprintf('IT-%06d', $ticket->id),
-                ]);
+                ])->saveQuietly();
             }
         });
     }

@@ -33,6 +33,8 @@ class DatabaseSeeder extends Seeder
             'phone' => '0901000001',
             'department' => 'IT Support',
             'primary_contact_method' => 'Telegram',
+            'is_manager' => true,
+            'is_active' => true,
             'password' => 'password',
             'status' => 'active',
         ]);
@@ -45,6 +47,8 @@ class DatabaseSeeder extends Seeder
             'phone' => '0901000002',
             'department' => 'IT Support',
             'primary_contact_method' => 'Phone',
+            'is_manager' => false,
+            'is_active' => true,
             'password' => 'password',
             'status' => 'active',
         ]);

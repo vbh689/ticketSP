@@ -90,7 +90,7 @@ class TicketController extends Controller
             'activities.actor',
         ]);
 
-        $user = $request->user();
+        $user = $request->user()?->is_active ? $request->user() : null;
         $hasValidViewKey = hash_equals($ticket->view_key, (string) $request->query('view_key'));
 
         if (! $user && ! $hasValidViewKey) {

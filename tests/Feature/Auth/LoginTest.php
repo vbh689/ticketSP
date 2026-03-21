@@ -14,12 +14,33 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'agent@internal.local',
+            'username' => 'agent.support',
             'password' => 'password',
             'status' => 'active',
+            'is_active' => true,
         ]);
 
         $response = $this->post('/login', [
-            'email' => $user->email,
+            'login' => $user->email,
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect('/tickets');
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_user_can_login_with_valid_username(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'agent@internal.local',
+            'username' => 'agent.support',
+            'password' => 'password',
+            'status' => 'active',
+            'is_active' => true,
+        ]);
+
+        $response = $this->post('/login', [
+            'login' => $user->username,
             'password' => 'password',
         ]);
 
@@ -31,16 +52,37 @@ class LoginTest extends TestCase
     {
         User::factory()->create([
             'email' => 'agent@internal.local',
+            'username' => 'agent.support',
             'password' => 'password',
         ]);
 
         $response = $this->from('/login')->post('/login', [
-            'email' => 'agent@internal.local',
+            'login' => 'agent.support',
             'password' => 'wrong-password',
         ]);
 
         $response->assertRedirect('/login');
-        $response->assertSessionHasErrors('email');
+        $response->assertSessionHasErrors('login');
+        $this->assertGuest();
+    }
+
+    public function test_inactive_user_cannot_login(): void
+    {
+        User::factory()->create([
+            'email' => 'inactive.agent@internal.local',
+            'username' => 'inactive.agent',
+            'password' => 'password',
+            'status' => 'inactive',
+            'is_active' => false,
+        ]);
+
+        $response = $this->from('/login')->post('/login', [
+            'login' => 'inactive.agent',
+            'password' => 'password',
+        ]);
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHasErrors('login');
         $this->assertGuest();
     }
 
