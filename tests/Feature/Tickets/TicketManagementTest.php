@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Tickets;
 
+use App\Models\Customer;
 use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\User;
@@ -18,19 +19,27 @@ class TicketManagementTest extends TestCase
         $category = TicketCategory::factory()->create();
 
         $response = $this->actingAs($support)->post('/tickets', [
-            'requester_name' => 'Le Van A',
-            'requester_contact' => 'leva@example.com',
+            'customer_name' => 'Cong ty Le Van A',
+            'customer_email' => 'leva@example.com',
+            'customer_phone' => '0909000111',
+            'customer_representative_name' => 'Le Van A',
+            'customer_representative_phone' => '0909000222',
             'title' => 'Không đăng nhập được wifi',
             'description' => 'Thiết bị báo sai mật khẩu dù đã đổi nhiều lần.',
             'category_id' => $category->id,
         ]);
 
         $ticket = Ticket::query()->first();
+        $customer = Customer::query()->first();
 
         $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertNotNull($customer);
+        $this->assertSame($customer->id, $ticket->customer_id);
         $this->assertDatabaseHas('tickets', [
             'id' => $ticket->id,
             'ticket_code' => sprintf('IT-%06d', $ticket->id),
+            'customer_id' => $customer->id,
+            'requester_name' => 'Cong ty Le Van A',
             'status' => Ticket::STATUS_OPEN,
             'assignee_id' => null,
             'created_by' => $support->id,
@@ -49,10 +58,41 @@ class TicketManagementTest extends TestCase
 
         $response->assertRedirect('/tickets/create');
         $response->assertSessionHasErrors([
-            'requester_name',
+            'customer_name',
             'title',
             'description',
             'category_id',
+        ]);
+    }
+
+    public function test_support_can_create_ticket_for_existing_customer_without_creating_duplicate_customer(): void
+    {
+        $support = User::factory()->create();
+        $category = TicketCategory::factory()->create();
+        $customer = Customer::query()->create([
+            'name' => 'Cong ty Hien Co',
+            'phone' => '028123123',
+            'email' => 'hello@hienco.local',
+            'representative_name' => 'Tran Hien Co',
+            'representative_phone' => '0908777666',
+            'license_count' => 18,
+        ]);
+
+        $response = $this->actingAs($support)->post('/tickets', [
+            'customer_id' => $customer->id,
+            'title' => 'Loi kich hoat phan mem',
+            'description' => 'Can kiem tra lai thong tin kich hoat tren may moi.',
+            'category_id' => $category->id,
+        ]);
+
+        $ticket = Ticket::query()->first();
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertDatabaseCount('customers', 1);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'customer_id' => $customer->id,
+            'requester_name' => 'Cong ty Hien Co',
         ]);
     }
 

@@ -14,14 +14,18 @@ use Illuminate\Support\Str;
 class Ticket extends Model
 {
     public const STATUS_OPEN = 'Open';
+
     public const STATUS_IN_PROGRESS = 'In Progress';
+
     public const STATUS_RESOLVED = 'Resolved';
+
     public const STATUS_CLOSED = 'Closed';
 
     /** @use HasFactory<TicketFactory> */
     use HasFactory;
 
     protected $fillable = [
+        'customer_id',
         'requester_name',
         'requester_contact',
         'title',
@@ -100,6 +104,11 @@ class Ticket extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(TicketCategory::class, 'category_id');
+    }
+
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
     }
 
     public function creator(): BelongsTo

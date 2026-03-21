@@ -339,6 +339,21 @@
                 background: rgba(215, 165, 75, 0.14);
                 color: #734400;
             }
+            .search-result {
+                width: 100%;
+                justify-content: flex-start;
+                text-align: left;
+                border-radius: 16px;
+                padding: 14px 16px;
+                background: var(--panel-strong);
+                border: 1px solid rgba(215, 200, 180, 0.88);
+                display: grid;
+                gap: 4px;
+            }
+            .search-result span {
+                color: var(--muted);
+                font-size: 0.9rem;
+            }
             .pagination {
                 display: flex;
                 justify-content: center;
