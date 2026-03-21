@@ -208,6 +208,9 @@
                 display: flex;
                 gap: 10px;
             }
+            .toolbar .toolbar-wide {
+                flex: 1 1 240px;
+            }
             table {
                 width: 100%;
                 border-collapse: collapse;
@@ -274,6 +277,40 @@
             .inline-form {
                 display: inline;
             }
+            .checkbox-cell {
+                width: 44px;
+            }
+            .checkbox-input {
+                width: 18px;
+                height: 18px;
+                padding: 0;
+                accent-color: var(--brand);
+            }
+            .people-list {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .person-chip {
+                display: inline-flex;
+                align-items: center;
+                padding: 6px 10px;
+                border-radius: 999px;
+                background: rgba(155, 61, 35, 0.08);
+                border: 1px solid rgba(155, 61, 35, 0.12);
+                color: var(--brand-strong);
+                font-size: 0.88rem;
+            }
+            .person-chip-muted {
+                background: rgba(111, 100, 87, 0.08);
+                border-color: rgba(111, 100, 87, 0.12);
+                color: var(--muted);
+            }
+            .inline-note {
+                margin-top: 6px;
+                color: var(--muted);
+                font-size: 0.88rem;
+            }
             .login-shell {
                 min-height: 100vh;
                 display: grid;
@@ -317,6 +354,10 @@
                 .topbar {
                     align-items: flex-start;
                     flex-direction: column;
+                }
+                .toolbar .toolbar-actions,
+                .toolbar .toolbar-wide {
+                    flex: 1 1 100%;
                 }
                 .toolbar {
                     display: grid;

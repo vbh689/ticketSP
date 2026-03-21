@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class Ticket extends Model
@@ -119,5 +120,30 @@ class Ticket extends Model
     public function activities(): HasMany
     {
         return $this->hasMany(TicketActivity::class)->latest();
+    }
+
+    public function relatedHandlers(): Collection
+    {
+        $users = collect();
+
+        if ($this->relationLoaded('assignee') && $this->assignee) {
+            $users->push($this->assignee);
+        } elseif ($this->assignee_id) {
+            $users->push($this->assignee()->first());
+        }
+
+        $activities = $this->relationLoaded('activities')
+            ? $this->activities
+            : $this->activities()->with('actor')->get();
+
+        return $users
+            ->merge(
+                $activities
+                    ->whereIn('action_type', ['ticket_claimed', 'comment_added', 'status_changed'])
+                    ->pluck('actor')
+                    ->filter()
+            )
+            ->unique('id')
+            ->values();
     }
 }

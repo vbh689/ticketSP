@@ -143,4 +143,59 @@ class TicketManagementTest extends TestCase
         $response->assertDontSee('name="content"', false);
         $response->assertDontSee('Nhận ticket này');
     }
+
+    public function test_support_can_bulk_update_selected_tickets_to_resolved(): void
+    {
+        $support = User::factory()->create();
+        $firstTicket = Ticket::factory()->create([
+            'status' => Ticket::STATUS_OPEN,
+            'resolved_at' => null,
+        ]);
+        $secondTicket = Ticket::factory()->create([
+            'status' => Ticket::STATUS_IN_PROGRESS,
+            'resolved_at' => null,
+        ]);
+
+        $this->actingAs($support)->patch(route('tickets.bulk-status.update'), [
+            'ticket_ids' => [$firstTicket->id, $secondTicket->id],
+            'status' => Ticket::STATUS_RESOLVED,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('tickets', [
+            'id' => $firstTicket->id,
+            'status' => Ticket::STATUS_RESOLVED,
+        ]);
+        $this->assertDatabaseHas('tickets', [
+            'id' => $secondTicket->id,
+            'status' => Ticket::STATUS_RESOLVED,
+        ]);
+        $this->assertDatabaseCount('ticket_activities', 2);
+    }
+
+    public function test_ticket_list_shows_related_handlers_from_claim_comment_and_status_updates(): void
+    {
+        $creator = User::factory()->create(['name' => 'Nguyen Creator']);
+        $claimHandler = User::factory()->create(['name' => 'Tran Claim']);
+        $supportAgent = User::factory()->create(['name' => 'Le Support']);
+        $ticket = Ticket::factory()->create([
+            'created_by' => $creator->id,
+            'assignee_id' => null,
+            'status' => Ticket::STATUS_OPEN,
+        ]);
+
+        $this->actingAs($claimHandler)->post(route('tickets.claim', $ticket))->assertRedirect();
+        $this->actingAs($supportAgent)->post(route('tickets.comments.store', $ticket), [
+            'content' => 'Đã kiểm tra lịch sử sự cố của máy.',
+        ])->assertRedirect();
+        $this->actingAs($supportAgent)->patch(route('tickets.status.update', $ticket), [
+            'status' => Ticket::STATUS_RESOLVED,
+        ])->assertRedirect();
+
+        $response = $this->actingAs($creator)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSee('Tran Claim');
+        $response->assertSee('Le Support');
+        $response->assertSee('Phụ trách chính: Tran Claim');
+    }
 }

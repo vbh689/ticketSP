@@ -24,7 +24,7 @@ class TicketController extends Controller
         ]);
 
         $tickets = Ticket::query()
-            ->with(['category', 'assignee', 'creator'])
+            ->with(['category', 'assignee', 'creator', 'activities.actor'])
             ->filter($filters)
             ->latest()
             ->paginate(12)
@@ -136,23 +136,8 @@ class TicketController extends Controller
         ]);
 
         $newStatus = $validated['status'];
-        $updates = ['status' => $newStatus];
 
-        if ($newStatus === Ticket::STATUS_RESOLVED) {
-            $updates['resolved_at'] = now();
-            $updates['closed_at'] = null;
-        } elseif ($newStatus === Ticket::STATUS_CLOSED) {
-            $updates['closed_at'] = now();
-
-            if (! $ticket->resolved_at) {
-                $updates['resolved_at'] = now();
-            }
-        } else {
-            $updates['resolved_at'] = null;
-            $updates['closed_at'] = null;
-        }
-
-        $ticket->update($updates);
+        $ticket->update($this->buildStatusPayload($ticket, $newStatus));
 
         TicketActivityLogger::log(
             $ticket->fresh(),
@@ -162,5 +147,55 @@ class TicketController extends Controller
         );
 
         return back()->with('status', 'Đã cập nhật trạng thái ticket.');
+    }
+
+    public function bulkUpdateStatus(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ticket_ids' => ['required', 'array', 'min:1'],
+            'ticket_ids.*' => ['integer', 'exists:tickets,id'],
+            'status' => ['required', Rule::in(Ticket::statuses())],
+        ], [], [
+            'ticket_ids' => 'danh sách ticket',
+            'status' => 'trạng thái',
+        ]);
+
+        $tickets = Ticket::query()
+            ->whereIn('id', $validated['ticket_ids'])
+            ->get();
+
+        foreach ($tickets as $ticket) {
+            $ticket->update($this->buildStatusPayload($ticket, $validated['status']));
+
+            TicketActivityLogger::log(
+                $ticket->fresh(),
+                $request->user(),
+                'status_changed',
+                "Cập nhật trạng thái sang {$validated['status']} bằng thao tác hàng loạt."
+            );
+        }
+
+        return back()->with('status', 'Đã cập nhật trạng thái cho các ticket đã chọn.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildStatusPayload(Ticket $ticket, string $newStatus): array
+    {
+        $updates = ['status' => $newStatus];
+
+        if ($newStatus === Ticket::STATUS_RESOLVED) {
+            $updates['resolved_at'] = now();
+            $updates['closed_at'] = null;
+        } elseif ($newStatus === Ticket::STATUS_CLOSED) {
+            $updates['closed_at'] = now();
+            $updates['resolved_at'] = $ticket->resolved_at ?: now();
+        } else {
+            $updates['resolved_at'] = null;
+            $updates['closed_at'] = null;
+        }
+
+        return $updates;
     }
 }

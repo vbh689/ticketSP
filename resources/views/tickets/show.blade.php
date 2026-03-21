@@ -15,6 +15,7 @@
 
             <div class="nav">
                 @if (! $isReadOnly)
+                    <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
                     <a class="button button-muted" href="{{ route('tickets.index') }}">Quay lại backlog</a>
                 @endif
             </div>
@@ -57,7 +58,19 @@
                     </div>
                     <div>
                         <div class="meta">Người phụ trách</div>
-                        <strong>{{ $ticket->assignee?->name ?? 'Chưa có người nhận' }}</strong>
+                        @php($relatedHandlers = $ticket->relatedHandlers())
+                        @if ($relatedHandlers->isNotEmpty())
+                            <div class="people-list">
+                                @foreach ($relatedHandlers as $handler)
+                                    <span class="person-chip">{{ $handler->display_name }}</span>
+                                @endforeach
+                            </div>
+                            @if ($ticket->assignee)
+                                <div class="inline-note">Phụ trách chính: {{ $ticket->assignee->display_name }}</div>
+                            @endif
+                        @else
+                            <strong>Chưa có người nhận</strong>
+                        @endif
                     </div>
                     <div>
                         <div class="meta">Trạng thái</div>

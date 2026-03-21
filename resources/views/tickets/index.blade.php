@@ -14,6 +14,7 @@
             </div>
 
             <div class="nav">
+                <a class="button button-muted" href="{{ route('employees.index') }}">Nhân viên</a>
                 <a class="button button-primary" href="{{ route('tickets.create') }}">Tạo ticket</a>
                 <form method="POST" action="{{ route('logout') }}" class="inline-form">
                     @csrf
@@ -107,22 +108,50 @@
         </section>
 
         <section class="card panel">
+            <form method="POST" action="{{ route('tickets.bulk-status.update') }}" class="stack" id="bulk-status-form">
+                @csrf
+                @method('PATCH')
+            </form>
+
+            <div class="toolbar">
+                <label class="toolbar-wide">
+                    Thao tác nhanh cho ticket đã chọn
+                    <select name="status" form="bulk-status-form" required>
+                        <option value="">Chọn trạng thái cần cập nhật</option>
+                        @foreach ($statuses as $status)
+                            <option value="{{ $status }}">{{ $status }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <div class="toolbar-actions">
+                    <button class="button-primary" type="submit" form="bulk-status-form">Cập nhật hàng loạt</button>
+                </div>
+            </div>
+
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
+                            <th class="checkbox-cell">
+                                <input type="checkbox" class="checkbox-input" data-select-all aria-label="Chọn tất cả ticket">
+                            </th>
                             <th>Mã ticket</th>
                             <th>Nội dung</th>
                             <th>Requester</th>
                             <th>Loại</th>
-                            <th>Phụ trách</th>
+                            <th>Người phụ trách</th>
                             <th>Trạng thái</th>
                             <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($tickets as $ticket)
+                            @php($relatedHandlers = $ticket->relatedHandlers())
                             <tr>
+                                <td class="checkbox-cell">
+                                    <input type="checkbox" class="checkbox-input" name="ticket_ids[]" value="{{ $ticket->id }}" form="bulk-status-form" aria-label="Chọn ticket {{ $ticket->ticket_code }}">
+                                </td>
                                 <td>
                                     <strong>{{ $ticket->ticket_code }}</strong>
                                     <div class="meta">{{ $ticket->created_at->format('d/m/Y H:i') }}</div>
@@ -136,7 +165,20 @@
                                     <div class="meta">{{ $ticket->requester_contact ?: 'Chưa có liên hệ' }}</div>
                                 </td>
                                 <td>{{ $ticket->category->name }}</td>
-                                <td>{{ $ticket->assignee?->name ?? 'Chưa có người nhận' }}</td>
+                                <td>
+                                    @if ($relatedHandlers->isNotEmpty())
+                                        <div class="people-list">
+                                            @foreach ($relatedHandlers as $handler)
+                                                <span class="person-chip">{{ $handler->display_name }}</span>
+                                            @endforeach
+                                        </div>
+                                        @if ($ticket->assignee)
+                                            <div class="inline-note">Phụ trách chính: {{ $ticket->assignee->display_name }}</div>
+                                        @endif
+                                    @else
+                                        <span class="person-chip person-chip-muted">Chưa có người xử lý</span>
+                                    @endif
+                                </td>
                                 <td>@include('tickets.partials.status-badge', ['status' => $ticket->status])</td>
                                 <td class="nav">
                                     <a class="button button-muted" href="{{ route('tickets.show', $ticket) }}">Chi tiết</a>
@@ -150,7 +192,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="empty">Chưa có ticket nào khớp với bộ lọc hiện tại.</td>
+                                <td colspan="8" class="empty">Chưa có ticket nào khớp với bộ lọc hiện tại.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -159,5 +201,23 @@
 
             <div class="pagination">{{ $tickets->links() }}</div>
         </section>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const selectAll = document.querySelector('[data-select-all]');
+
+                if (! selectAll) {
+                    return;
+                }
+
+                const checkboxes = Array.from(document.querySelectorAll('input[name="ticket_ids[]"]'));
+
+                selectAll.addEventListener('change', () => {
+                    checkboxes.forEach((checkbox) => {
+                        checkbox.checked = selectAll.checked;
+                    });
+                });
+            });
+        </script>
     </main>
 @endsection
