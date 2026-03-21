@@ -381,7 +381,7 @@ class TicketManagementTest extends TestCase
         $response->assertOk();
         $response->assertSee('Tran Claim');
         $response->assertSee('Le Support');
-        $response->assertSee('Phụ trách chính: Tran Claim');
+        $response->assertDontSee('Phụ trách chính: Tran Claim');
     }
 
     public function test_ticket_list_is_sorted_with_newest_ticket_first(): void

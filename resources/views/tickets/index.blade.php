@@ -189,9 +189,6 @@
                                                 <span class="person-chip">{{ $handler->display_name }}</span>
                                             @endforeach
                                         </div>
-                                        @if ($ticket->assignee)
-                                            <div class="inline-note">Phụ trách chính: {{ $ticket->assignee->display_name }}</div>
-                                        @endif
                                     @else
                                         <span class="person-chip person-chip-muted">Chưa có người xử lý</span>
                                     @endif
