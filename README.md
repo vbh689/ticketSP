@@ -1,11 +1,11 @@
 # ticketSP
 
-Ứng dụng quản lý ticket nội bộ cho đội IT support, được triển khai theo định hướng MVP trong thư mục [`docs/`](./docs/README.md).
+Ứng dụng quản lý ticket nội bộ cho đội IT support.
 
 ## Phạm vi hiện tại
 
 - Đăng nhập bằng tài khoản nội bộ đơn giản.
-- Tạo ticket mới hộ người dùng cuối.
+- Tạo ticket mới hộ người dùng.
 - Theo dõi backlog chung với tìm kiếm và bộ lọc cơ bản.
 - Nhận ticket về xử lý.
 - Cập nhật trạng thái `Open`, `In Progress`, `Resolved`, `Closed`.
