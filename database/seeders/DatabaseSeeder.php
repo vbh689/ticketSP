@@ -5,13 +5,10 @@ namespace Database\Seeders;
 use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
@@ -32,6 +29,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'support.lead@internal.local',
         ], [
             'name' => 'Nguyen Support',
+            'username' => 'support.lead',
+            'phone' => '0901000001',
+            'department' => 'IT Support',
+            'primary_contact_method' => 'Telegram',
             'password' => 'password',
             'status' => 'active',
         ]);
@@ -40,6 +41,10 @@ class DatabaseSeeder extends Seeder
             'email' => 'support.agent@internal.local',
         ], [
             'name' => 'Tran Helpdesk',
+            'username' => 'support.agent',
+            'phone' => '0901000002',
+            'department' => 'IT Support',
+            'primary_contact_method' => 'Phone',
             'password' => 'password',
             'status' => 'active',
         ]);

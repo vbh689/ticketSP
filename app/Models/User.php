@@ -22,6 +22,10 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'username',
+        'phone',
+        'department',
+        'primary_contact_method',
         'password',
         'status',
     ];
@@ -66,5 +70,10 @@ class User extends Authenticatable
     public function ticketActivities(): HasMany
     {
         return $this->hasMany(TicketActivity::class, 'actor_id');
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->name ?: ($this->username ?: $this->email);
     }
 }
