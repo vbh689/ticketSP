@@ -24,3 +24,6 @@ Homestead.yaml
 Thumbs.db
 docs/*
 AGENTS.md
+
+#playwright
+output/playwright 
