@@ -1,0 +1,146 @@
+<?php
+
+namespace Tests\Feature\Tickets;
+
+use App\Models\Ticket;
+use App\Models\TicketCategory;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class TicketManagementTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_support_can_create_ticket_into_backlog(): void
+    {
+        $support = User::factory()->create();
+        $category = TicketCategory::factory()->create();
+
+        $response = $this->actingAs($support)->post('/tickets', [
+            'requester_name' => 'Le Van A',
+            'requester_contact' => 'leva@example.com',
+            'title' => 'Không đăng nhập được wifi',
+            'description' => 'Thiết bị báo sai mật khẩu dù đã đổi nhiều lần.',
+            'category_id' => $category->id,
+        ]);
+
+        $ticket = Ticket::query()->first();
+
+        $response->assertRedirect(route('tickets.show', $ticket));
+        $this->assertDatabaseHas('tickets', [
+            'id' => $ticket->id,
+            'status' => Ticket::STATUS_OPEN,
+            'assignee_id' => null,
+            'created_by' => $support->id,
+        ]);
+        $this->assertDatabaseHas('ticket_activities', [
+            'ticket_id' => $ticket->id,
+            'action_type' => 'ticket_created',
+        ]);
+    }
+
+    public function test_ticket_creation_requires_mandatory_fields(): void
+    {
+        $support = User::factory()->create();
+
+        $response = $this->actingAs($support)->from('/tickets/create')->post('/tickets', []);
+
+        $response->assertRedirect('/tickets/create');
+        $response->assertSessionHasErrors([
+            'requester_name',
+            'title',
+            'description',
+            'category_id',
+        ]);
+    }
+
+    public function test_ticket_list_can_be_filtered(): void
+    {
+        $support = User::factory()->create();
+        $software = TicketCategory::factory()->create(['name' => 'Phần mềm']);
+        $network = TicketCategory::factory()->create(['name' => 'Mạng']);
+        $assignee = User::factory()->create(['name' => 'Nguyen Assignee']);
+
+        Ticket::factory()->create([
+            'title' => 'Cài lại Office',
+            'category_id' => $software->id,
+            'status' => Ticket::STATUS_OPEN,
+            'created_by' => $support->id,
+        ]);
+
+        Ticket::factory()->create([
+            'title' => 'Sự cố VPN',
+            'category_id' => $network->id,
+            'status' => Ticket::STATUS_IN_PROGRESS,
+            'assignee_id' => $assignee->id,
+            'created_by' => $support->id,
+        ]);
+
+        $response = $this->actingAs($support)->get('/tickets?status=In%20Progress&category_id='.$network->id.'&assignee_id='.$assignee->id.'&search=VPN');
+
+        $response->assertOk();
+        $response->assertSee('Sự cố VPN');
+        $response->assertDontSee('Cài lại Office');
+    }
+
+    public function test_support_can_claim_ticket_and_update_status(): void
+    {
+        $support = User::factory()->create();
+        $ticket = Ticket::factory()->create([
+            'status' => Ticket::STATUS_OPEN,
+            'assignee_id' => null,
+        ]);
+
+        $this->actingAs($support)->post(route('tickets.claim', $ticket))
+            ->assertRedirect();
+
+        $ticket->refresh();
+
+        $this->assertSame($support->id, $ticket->assignee_id);
+        $this->assertSame(Ticket::STATUS_IN_PROGRESS, $ticket->status);
+
+        $this->actingAs($support)->patch(route('tickets.status.update', $ticket), [
+            'status' => Ticket::STATUS_RESOLVED,
+        ])->assertRedirect();
+
+        $ticket->refresh();
+
+        $this->assertSame(Ticket::STATUS_RESOLVED, $ticket->status);
+        $this->assertNotNull($ticket->resolved_at);
+        $this->assertDatabaseHas('ticket_activities', [
+            'ticket_id' => $ticket->id,
+            'action_type' => 'ticket_claimed',
+        ]);
+        $this->assertDatabaseHas('ticket_activities', [
+            'ticket_id' => $ticket->id,
+            'action_type' => 'status_changed',
+        ]);
+    }
+
+    public function test_support_can_add_comment_and_public_view_key_is_read_only(): void
+    {
+        $support = User::factory()->create();
+        $ticket = Ticket::factory()->create([
+            'created_by' => $support->id,
+        ]);
+
+        $this->actingAs($support)->post(route('tickets.comments.store', $ticket), [
+            'content' => 'Đã kiểm tra và đang cập nhật máy người dùng.',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('ticket_comments', [
+            'ticket_id' => $ticket->id,
+            'author_id' => $support->id,
+        ]);
+
+        auth()->logout();
+
+        $response = $this->get(route('tickets.show', ['ticket' => $ticket, 'view_key' => $ticket->view_key]));
+
+        $response->assertOk();
+        $response->assertSee('Chế độ xem read-only');
+        $response->assertDontSee('name="content"', false);
+        $response->assertDontSee('Nhận ticket này');
+    }
+}
