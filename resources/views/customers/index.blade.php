@@ -74,5 +74,7 @@
 
             <div class="pagination">{{ $customers->links() }}</div>
         </section>
+
+        @include('partials.search-rebuild')
     </main>
 @endsection

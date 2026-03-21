@@ -368,6 +368,31 @@
                 color: var(--muted);
                 font-size: 0.9rem;
             }
+            .admin-footnote {
+                display: flex;
+                gap: 4px;
+                flex-wrap: wrap;
+                justify-content: center;
+                color: var(--muted);
+                font-size: 0.88rem;
+            }
+            .admin-footnote-form {
+                display: inline-flex;
+            }
+            .text-link-button {
+                padding: 0;
+                border: 0;
+                border-radius: 0;
+                background: transparent;
+                color: var(--muted);
+                text-decoration: underline;
+                text-underline-offset: 2px;
+                white-space: normal;
+            }
+            .text-link-button:hover {
+                transform: none;
+                color: var(--brand-strong);
+            }
             .pagination {
                 display: flex;
                 justify-content: center;

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\SearchMaintenanceController;
 use App\Http\Controllers\TicketCommentController;
 use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,8 @@ Route::middleware(['auth', 'active'])->group(function (): void {
     Route::post('/tickets/{ticket}/comments', [TicketCommentController::class, 'store'])->whereNumber('ticket')->name('tickets.comments.store');
 
     Route::middleware('manager')->group(function (): void {
+        Route::post('/admin/search/rebuild', [SearchMaintenanceController::class, 'rebuild'])->name('search.rebuild');
+
         Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
         Route::get('/customers/create', [CustomerController::class, 'create'])->name('customers.create');
         Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');

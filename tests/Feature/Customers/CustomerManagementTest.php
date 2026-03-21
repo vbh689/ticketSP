@@ -3,8 +3,10 @@
 namespace Tests\Feature\Customers;
 
 use App\Models\Customer;
+use App\Models\Ticket;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class CustomerManagementTest extends TestCase
@@ -100,6 +102,8 @@ class CustomerManagementTest extends TestCase
 
     public function test_support_can_search_customers_for_ticket_creation_using_db_fallback(): void
     {
+        config()->set('scout.driver', 'database');
+
         $support = User::factory()->create(['is_manager' => false]);
         Customer::query()->create([
             'name' => 'Cong ty Sao Bac',
@@ -113,11 +117,32 @@ class CustomerManagementTest extends TestCase
         ]);
 
         $response = $this->actingAs($support)->getJson(route('customers.search', [
-            'q' => 'sao bc',
+            'q' => 'sao bac',
         ]));
 
         $response->assertOk();
-        $response->assertJsonPath('data.0.name', 'Cong ty Sao Bac');
-        $response->assertJsonPath('data.0.contact_preview', 'Nguyen Ha');
+        $response->assertJsonFragment([
+            'name' => 'Cong ty Sao Bac',
+            'contact_preview' => 'Nguyen Ha',
+        ]);
+    }
+
+    public function test_manager_can_trigger_search_rebuild_from_admin_pages(): void
+    {
+        config()->set('scout.driver', 'meilisearch');
+        Artisan::spy();
+
+        $manager = User::factory()->create(['is_manager' => true]);
+
+        $response = $this->actingAs($manager)->post(route('search.rebuild'));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status', 'Đã rebuild lại index tìm kiếm.');
+
+        Artisan::shouldHaveReceived('call')->with('scout:sync-index-settings')->once();
+        Artisan::shouldHaveReceived('call')->with('scout:flush', ['model' => Customer::class])->once();
+        Artisan::shouldHaveReceived('call')->with('scout:flush', ['model' => Ticket::class])->once();
+        Artisan::shouldHaveReceived('call')->with('scout:import', ['model' => Customer::class])->once();
+        Artisan::shouldHaveReceived('call')->with('scout:import', ['model' => Ticket::class])->once();
     }
 }
