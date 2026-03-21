@@ -5,8 +5,10 @@ namespace Tests\Feature\Customers;
 use App\Models\Customer;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Http\Controllers\SearchMaintenanceController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Artisan;
+use Laravel\Scout\EngineManager;
+use Mockery;
 use Tests\TestCase;
 
 class CustomerManagementTest extends TestCase
@@ -130,7 +132,13 @@ class CustomerManagementTest extends TestCase
     public function test_manager_can_trigger_search_rebuild_from_admin_pages(): void
     {
         config()->set('scout.driver', 'meilisearch');
-        Artisan::spy();
+        $controller = Mockery::mock(SearchMaintenanceController::class, [
+            Mockery::mock(EngineManager::class),
+        ])->makePartial()->shouldAllowMockingProtectedMethods();
+        $controller->shouldReceive('syncConfiguredIndexSettings')->once();
+        $controller->shouldReceive('rebuildModelIndex')->with(Customer::class)->once();
+        $controller->shouldReceive('rebuildModelIndex')->with(Ticket::class)->once();
+        $this->app->instance(SearchMaintenanceController::class, $controller);
 
         $manager = User::factory()->create(['is_manager' => true]);
 
@@ -138,11 +146,24 @@ class CustomerManagementTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('status', 'Đã rebuild lại index tìm kiếm.');
+    }
 
-        Artisan::shouldHaveReceived('call')->with('scout:sync-index-settings')->once();
-        Artisan::shouldHaveReceived('call')->with('scout:flush', ['model' => Customer::class])->once();
-        Artisan::shouldHaveReceived('call')->with('scout:flush', ['model' => Ticket::class])->once();
-        Artisan::shouldHaveReceived('call')->with('scout:import', ['model' => Customer::class])->once();
-        Artisan::shouldHaveReceived('call')->with('scout:import', ['model' => Ticket::class])->once();
+    public function test_manager_can_trigger_search_rebuild_when_index_settings_command_is_unavailable(): void
+    {
+        config()->set('scout.driver', 'meilisearch');
+        $controller = Mockery::mock(SearchMaintenanceController::class, [
+            Mockery::mock(EngineManager::class),
+        ])->makePartial()->shouldAllowMockingProtectedMethods();
+        $controller->shouldReceive('syncConfiguredIndexSettings')->once();
+        $controller->shouldReceive('rebuildModelIndex')->with(Customer::class)->once();
+        $controller->shouldReceive('rebuildModelIndex')->with(Ticket::class)->once();
+        $this->app->instance(SearchMaintenanceController::class, $controller);
+
+        $manager = User::factory()->create(['is_manager' => true]);
+
+        $response = $this->actingAs($manager)->post(route('search.rebuild'));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('status', 'Đã rebuild lại index tìm kiếm.');
     }
 }
