@@ -130,14 +130,22 @@
             let searchController = null;
             let searchTimer = null;
 
+            const setPreviewValue = (element, value) => {
+                if (!element) {
+                    return;
+                }
+
+                element.value = value;
+            };
+
             const oldCustomerId = customerIdInput.value;
             let selectedCustomer = oldCustomerId ? initialSelectedCustomer : null;
 
             const setCustomerStateDisabled = (disabled) => {
                 customerNameInput.disabled = disabled;
                 customerNameInput.classList.toggle('input-disabled', disabled);
-                customerContactPreview.classList.toggle('input-disabled', disabled);
-                customerLicensePreview.classList.toggle('input-disabled', disabled);
+                customerContactPreview?.classList.toggle('input-disabled', disabled);
+                customerLicensePreview?.classList.toggle('input-disabled', disabled);
                 customerNameInput.required = !disabled;
             };
 
@@ -170,8 +178,8 @@
                     selected.textContent = '';
                     actions.style.display = 'none';
                     customerIdInput.value = '';
-                    customerContactPreview.value = '';
-                    customerLicensePreview.value = '';
+                    setPreviewValue(customerContactPreview, '');
+                    setPreviewValue(customerLicensePreview, '');
                     setCustomerStateDisabled(false);
 
                     return;
@@ -183,8 +191,8 @@
                 customerIdInput.value = selectedCustomer.id;
                 searchInput.value = selectedCustomer.name;
                 customerNameInput.value = selectedCustomer.name;
-                customerContactPreview.value = selectedCustomer.contact_preview || 'Chưa có';
-                customerLicensePreview.value = selectedCustomer.license_preview || 'Chưa cập nhật';
+                setPreviewValue(customerContactPreview, selectedCustomer.contact_preview || 'Chưa có');
+                setPreviewValue(customerLicensePreview, selectedCustomer.license_preview || 'Chưa cập nhật');
                 results.style.display = 'none';
                 results.innerHTML = '';
                 setCustomerStateDisabled(true);

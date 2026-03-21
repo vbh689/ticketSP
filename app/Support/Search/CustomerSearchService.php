@@ -22,7 +22,11 @@ class CustomerSearchService
 
         if ($this->shouldUseMeilisearch()) {
             try {
-                return $this->searchWithMeilisearch($query, $limit);
+                $meilisearchResults = $this->searchWithMeilisearch($query, $limit);
+
+                if ($meilisearchResults->isNotEmpty()) {
+                    return $meilisearchResults;
+                }
             } catch (\Throwable $exception) {
                 Log::warning('Customer search fell back to database search.', [
                     'message' => $exception->getMessage(),
