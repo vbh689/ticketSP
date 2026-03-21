@@ -69,7 +69,7 @@
             <form method="GET" action="{{ route('tickets.index') }}" class="toolbar">
                 <label>
                     Tìm kiếm
-                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="IT-000001, VPN, tên người dùng">
+                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="TK-260320-001, VPN, tên người dùng">
                     <!-- <span class="inline-note">Hỗ trợ gõ gần đúng, prefix matching và một số lỗi typo phổ biến.</span> -->
                 </label>
 
@@ -100,6 +100,15 @@
                         <option value="unassigned" @selected(($filters['assignee_id'] ?? '') === 'unassigned')>Chưa có người nhận</option>
                         @foreach ($assignees as $assignee)
                             <option value="{{ $assignee->id }}" @selected((string) ($filters['assignee_id'] ?? '') === (string) $assignee->id)>{{ $assignee->name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <label>
+                    Số ticket mỗi trang
+                    <select name="per_page">
+                        @foreach (\App\Support\Search\TicketSearchService::perPageOptions() as $perPageOption)
+                            <option value="{{ $perPageOption }}" @selected((int) ($filters['per_page'] ?? \App\Support\Search\TicketSearchService::DEFAULT_PER_PAGE) === $perPageOption)>{{ $perPageOption }}</option>
                         @endforeach
                     </select>
                 </label>
@@ -184,14 +193,16 @@
                                     @endif
                                 </td>
                                 <td>@include('tickets.partials.status-badge', ['status' => $ticket->status])</td>
-                                <td class="nav">
-                                    <a class="button button-muted" href="{{ route('tickets.show', $ticket) }}">Chi tiết</a>
-                                    @if (! $ticket->assignee_id)
-                                        <form method="POST" action="{{ route('tickets.claim', $ticket) }}" class="inline-form">
-                                            @csrf
-                                            <button class="button-primary" type="submit">Nhận ticket</button>
-                                        </form>
-                                    @endif
+                                <td>
+                                    <div class="ticket-actions">
+                                        <a class="button button-muted" href="{{ route('tickets.show', $ticket) }}">Chi tiết</a>
+                                        @if (! $ticket->assignee_id)
+                                            <form method="POST" action="{{ route('tickets.claim', $ticket) }}" class="inline-form">
+                                                @csrf
+                                                <button class="button-primary" type="submit">Nhận ticket</button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty

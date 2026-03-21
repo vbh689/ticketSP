@@ -13,22 +13,37 @@ use Illuminate\Support\Facades\Log;
 
 class TicketSearchService
 {
+    public const DEFAULT_PER_PAGE = 25;
+
+    public const PER_PAGE_OPTIONS = [25, 50, 100];
+
+    public static function perPageOptions(): array
+    {
+        return self::PER_PAGE_OPTIONS;
+    }
+
     public function search(array $filters, Request $request): LengthAwarePaginator
     {
         $search = trim((string) ($filters['search'] ?? ''));
+        $perPage = $this->resolvePerPage($filters);
 
         $ticketQuery = Ticket::query()
             ->with(['category', 'assignee', 'creator', 'activities.actor'])
             ->filter($filters)
-            ->latest();
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         if ($search === '') {
-            return $ticketQuery->paginate(12)->withQueryString();
+            return $ticketQuery->paginate($perPage)->withQueryString();
         }
 
         if ($this->shouldUseMeilisearch() && ($filters['assignee_id'] ?? null) !== 'unassigned') {
             try {
-                return $this->searchWithMeilisearch($filters, $request);
+                $meilisearchResults = $this->searchWithMeilisearch($filters, $request, $perPage);
+
+                if ($meilisearchResults->total() > 0) {
+                    return $meilisearchResults;
+                }
             } catch (\Throwable $exception) {
                 Log::warning('Ticket search fell back to database search.', [
                     'message' => $exception->getMessage(),
@@ -36,7 +51,7 @@ class TicketSearchService
             }
         }
 
-        return $this->searchWithDatabase($ticketQuery, $search, $request);
+        return $this->searchWithDatabase($ticketQuery, $search, $request, $perPage);
     }
 
     private function shouldUseMeilisearch(): bool
@@ -45,11 +60,10 @@ class TicketSearchService
             && filled(config('scout.meilisearch.host'));
     }
 
-    private function searchWithMeilisearch(array $filters, Request $request): LengthAwarePaginator
+    private function searchWithMeilisearch(array $filters, Request $request, int $perPage): LengthAwarePaginator
     {
         $search = trim((string) ($filters['search'] ?? ''));
         $page = Paginator::resolveCurrentPage();
-        $perPage = 12;
 
         $options = [
             'limit' => $perPage,
@@ -109,7 +123,7 @@ class TicketSearchService
         );
     }
 
-    private function searchWithDatabase(Builder $ticketQuery, string $search, Request $request): LengthAwarePaginator
+    private function searchWithDatabase(Builder $ticketQuery, string $search, Request $request, int $perPage): LengthAwarePaginator
     {
         $candidates = $ticketQuery->limit(250)->get();
 
@@ -133,11 +147,14 @@ class TicketSearchService
                 return $ticket;
             })
             ->filter(fn (Ticket $ticket) => $ticket->search_score !== null)
-            ->sortByDesc('search_score')
+            ->sortBy([
+                ['search_score', 'desc'],
+                ['created_at', 'desc'],
+                ['id', 'desc'],
+            ])
             ->values();
 
         $page = Paginator::resolveCurrentPage();
-        $perPage = 12;
 
         return new PaginatorResult(
             $matchedTickets->forPage($page, $perPage)->values(),
@@ -168,5 +185,14 @@ class TicketSearchService
         }
 
         return $expressions === [] ? null : implode(' AND ', $expressions);
+    }
+
+    private function resolvePerPage(array $filters): int
+    {
+        $perPage = (int) ($filters['per_page'] ?? self::DEFAULT_PER_PAGE);
+
+        return in_array($perPage, self::PER_PAGE_OPTIONS, true)
+            ? $perPage
+            : self::DEFAULT_PER_PAGE;
     }
 }

@@ -33,13 +33,13 @@ class TicketManagementTest extends TestCase
         $this->assertSame($customer->id, $ticket->customer_id);
         $this->assertDatabaseHas('tickets', [
             'id' => $ticket->id,
-            'ticket_code' => sprintf('IT-%06d', $ticket->id),
             'customer_id' => $customer->id,
             'requester_name' => 'Cong ty Le Van A',
             'status' => Ticket::STATUS_OPEN,
             'assignee_id' => null,
             'created_by' => $support->id,
         ]);
+        $this->assertMatchesRegularExpression('/^TK-\d{6}-001$/', (string) $ticket->ticket_code);
         $this->assertDatabaseHas('ticket_activities', [
             'ticket_id' => $ticket->id,
             'action_type' => 'ticket_created',
@@ -117,7 +117,7 @@ class TicketManagementTest extends TestCase
         $response = $this->actingAs($support)->get('/tickets?status=In%20Progress&category_id='.$network->id.'&assignee_id='.$assignee->id.'&search=VPN');
 
         $response->assertOk();
-        $response->assertSeeText('Sự cố VPN');
+        $response->assertSee('Sự cố <mark>VPN</mark>', false);
         $response->assertDontSeeText('Cài lại Office');
     }
 
@@ -143,7 +143,7 @@ class TicketManagementTest extends TestCase
         $response = $this->actingAs($support)->get('/tickets?search=vpn vanphng');
 
         $response->assertOk();
-        $response->assertSeeText('Su co VPN van phong');
+        $response->assertViewHas('tickets', fn ($tickets) => $tickets->total() === 1);
         $response->assertDontSeeText('Cai dat may in');
         $response->assertSee('<mark>VPN</mark>', false);
     }
@@ -330,5 +330,74 @@ class TicketManagementTest extends TestCase
         $response->assertSee('Tran Claim');
         $response->assertSee('Le Support');
         $response->assertSee('Phụ trách chính: Tran Claim');
+    }
+
+    public function test_ticket_list_is_sorted_with_newest_ticket_first(): void
+    {
+        $support = User::factory()->create();
+        $olderTicket = Ticket::factory()->create([
+            'title' => 'Ticket cũ hơn',
+            'created_by' => $support->id,
+            'created_at' => now()->subDay(),
+        ]);
+        $newerTicket = Ticket::factory()->create([
+            'title' => 'Ticket mới hơn',
+            'created_by' => $support->id,
+            'created_at' => now(),
+        ]);
+
+        $response = $this->actingAs($support)->get(route('tickets.index'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder([
+            $newerTicket->ticket_code,
+            $olderTicket->ticket_code,
+        ], false);
+    }
+
+    public function test_ticket_list_supports_per_page_options_and_keeps_selection(): void
+    {
+        $support = User::factory()->create();
+
+        Ticket::factory()->count(30)->create([
+            'created_by' => $support->id,
+        ]);
+
+        $response = $this->actingAs($support)->get(route('tickets.index', [
+            'per_page' => 25,
+        ]));
+
+        $response->assertOk();
+        $response->assertViewHas('tickets', fn ($tickets) => $tickets->perPage() === 25);
+        $response->assertSee('name="per_page"', false);
+        $response->assertSee('value="25" selected', false);
+        $response->assertSee('per_page=25', false);
+        $response->assertSee('page=2', false);
+    }
+
+    public function test_ticket_code_uses_daily_sequence_format(): void
+    {
+        $support = User::factory()->create();
+        $date = now()->setDate(2026, 3, 26)->setTime(8, 30);
+
+        $firstTicket = Ticket::factory()->create([
+            'created_by' => $support->id,
+            'created_at' => $date,
+            'updated_at' => $date,
+        ]);
+        $secondTicket = Ticket::factory()->create([
+            'created_by' => $support->id,
+            'created_at' => $date->copy()->addHour(),
+            'updated_at' => $date->copy()->addHour(),
+        ]);
+        $nextDayTicket = Ticket::factory()->create([
+            'created_by' => $support->id,
+            'created_at' => $date->copy()->addDay(),
+            'updated_at' => $date->copy()->addDay(),
+        ]);
+
+        $this->assertSame('TK-260326-001', $firstTicket->ticket_code);
+        $this->assertSame('TK-260326-002', $secondTicket->ticket_code);
+        $this->assertSame('TK-260327-001', $nextDayTicket->ticket_code);
     }
 }

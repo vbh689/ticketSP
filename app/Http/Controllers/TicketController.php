@@ -27,6 +27,7 @@ class TicketController extends Controller
             'status' => ['nullable', Rule::in(Ticket::statuses())],
             'category_id' => ['nullable', 'string'],
             'assignee_id' => ['nullable', 'string'],
+            'per_page' => ['nullable', Rule::in(TicketSearchService::perPageOptions())],
         ]);
 
         $tickets = $this->ticketSearch->search($filters, $request);

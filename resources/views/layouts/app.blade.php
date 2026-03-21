@@ -296,6 +296,13 @@
             .inline-form {
                 display: inline-flex;
             }
+            .ticket-actions {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: wrap;
+                white-space: nowrap;
+            }
             .checkbox-cell {
                 width: 44px;
             }

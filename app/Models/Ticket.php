@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
@@ -62,10 +63,24 @@ class Ticket extends Model
         static::created(function (Ticket $ticket): void {
             if (! $ticket->ticket_code) {
                 $ticket->forceFill([
-                    'ticket_code' => sprintf('IT-%06d', $ticket->id),
+                    'ticket_code' => self::generateTicketCode($ticket),
                 ])->saveQuietly();
             }
         });
+    }
+
+    private static function generateTicketCode(Ticket $ticket): string
+    {
+        $createdAt = $ticket->created_at instanceof Carbon
+            ? $ticket->created_at
+            : Carbon::parse($ticket->created_at ?? now());
+
+        $dailySequence = self::query()
+            ->whereDate('created_at', $createdAt->toDateString())
+            ->where('id', '<=', $ticket->id)
+            ->count();
+
+        return sprintf('TK-%s-%03d', $createdAt->format('ymd'), $dailySequence);
     }
 
     public static function statuses(): array
