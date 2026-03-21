@@ -230,10 +230,14 @@
 
                 <div class="export-actions">
                     @foreach ($exportPeriods as $periodValue => $period)
-                        <form method="GET" action="{{ route('tickets.export') }}" class="inline-form">
-                            <input type="hidden" name="period" value="{{ $periodValue }}">
-                            <button class="button button-muted" type="submit">{{ $period['label'] }}</button>
-                        </form>
+                        <button
+                            class="button button-muted"
+                            type="button"
+                            data-export-url="{{ route('tickets.export', ['period' => $periodValue]) }}"
+                            data-export-filename="tickets-{{ $period['slug'] }}.csv"
+                        >
+                            {{ $period['label'] }}
+                        </button>
                     @endforeach
                 </div>
             </div>
@@ -252,6 +256,72 @@
                 selectAll.addEventListener('change', () => {
                     checkboxes.forEach((checkbox) => {
                         checkbox.checked = selectAll.checked;
+                    });
+                });
+
+                const exportButtons = Array.from(document.querySelectorAll('[data-export-url]'));
+
+                const parseFilename = (headerValue, fallback) => {
+                    if (! headerValue) {
+                        return fallback;
+                    }
+
+                    const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+
+                    if (utf8Match) {
+                        return decodeURIComponent(utf8Match[1]);
+                    }
+
+                    const asciiMatch = headerValue.match(/filename=\"?([^\";]+)\"?/i);
+
+                    return asciiMatch ? asciiMatch[1] : fallback;
+                };
+
+                exportButtons.forEach((button) => {
+                    button.addEventListener('click', async () => {
+                        const exportUrl = button.dataset.exportUrl;
+                        const fallbackFilename = button.dataset.exportFilename || 'tickets-export.csv';
+
+                        if (! exportUrl) {
+                            return;
+                        }
+
+                        const originalLabel = button.textContent;
+                        button.disabled = true;
+                        button.textContent = 'Đang tải...';
+
+                        try {
+                            const response = await fetch(exportUrl, {
+                                credentials: 'same-origin',
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                            });
+
+                            if (! response.ok) {
+                                throw new Error('Export failed');
+                            }
+
+                            const filename = parseFilename(
+                                response.headers.get('Content-Disposition'),
+                                fallbackFilename
+                            );
+                            const blob = await response.blob();
+                            const blobUrl = window.URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+
+                            link.href = blobUrl;
+                            link.download = filename;
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                            window.URL.revokeObjectURL(blobUrl);
+                        } catch (error) {
+                            window.location.assign(exportUrl);
+                        } finally {
+                            button.disabled = false;
+                            button.textContent = originalLabel;
+                        }
                     });
                 });
             });
