@@ -74,6 +74,33 @@ php artisan migrate:fresh --seed
 php artisan route:list
 ```
 
+## Meilisearch Local
+
+Tìm kiếm khách hàng và ticket đã sẵn sàng để dùng `Meilisearch` qua `Laravel Scout`, nhưng vẫn fallback về DB search nếu search service chưa chạy.
+
+1. Khởi động Meilisearch:
+
+```bash
+docker compose -f docker-compose.meilisearch.yml up -d
+```
+
+2. Cập nhật `.env`:
+
+```bash
+SCOUT_DRIVER=meilisearch
+SCOUT_QUEUE=true
+MEILISEARCH_HOST=http://127.0.0.1:7700
+MEILISEARCH_KEY=ticketsp-master-key
+```
+
+3. Đồng bộ index settings và import dữ liệu:
+
+```bash
+php artisan scout:sync-index-settings
+php artisan scout:import "App\\Models\\Customer"
+php artisan scout:import "App\\Models\\Ticket"
+```
+
 ## Cấu trúc chính
 
 - `app/Http/Controllers/`:

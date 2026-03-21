@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Ticket;
 use App\Models\TicketCategory;
 use App\Models\User;
+use App\Support\Search\TicketSearchService;
 use App\Support\TicketActivityLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,10 @@ use Illuminate\View\View;
 
 class TicketController extends Controller
 {
+    public function __construct(
+        private readonly TicketSearchService $ticketSearch,
+    ) {}
+
     public function index(Request $request): View
     {
         $filters = $request->validate([
@@ -24,12 +29,7 @@ class TicketController extends Controller
             'assignee_id' => ['nullable', 'string'],
         ]);
 
-        $tickets = Ticket::query()
-            ->with(['category', 'assignee', 'creator', 'activities.actor'])
-            ->filter($filters)
-            ->latest()
-            ->paginate(12)
-            ->withQueryString();
+        $tickets = $this->ticketSearch->search($filters, $request);
 
         return view('tickets.index', [
             'tickets' => $tickets,
@@ -42,21 +42,20 @@ class TicketController extends Controller
 
     public function create(): View
     {
+        $selectedCustomerId = session()->getOldInput('customer_id');
+
         return view('tickets.create', [
             'categories' => TicketCategory::query()->where('is_active', true)->orderBy('name')->get(),
-            'customers' => Customer::query()
-                ->orderBy('name')
-                ->get([
+            'selectedCustomer' => $selectedCustomerId
+                ? Customer::query()->find($selectedCustomerId, [
                     'id',
                     'name',
-                    'address',
                     'phone',
                     'email',
                     'representative_name',
-                    'representative_phone',
                     'license_count',
-                    'notes',
-                ]),
+                ])
+                : null,
         ]);
     }
 
@@ -65,26 +64,12 @@ class TicketController extends Controller
         $validated = $request->validate([
             'customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:255'],
-            'customer_address' => ['nullable', 'string', 'max:1000'],
-            'customer_phone' => ['nullable', 'string', 'max:255'],
-            'customer_email' => ['nullable', 'email', 'max:255'],
-            'customer_representative_name' => ['nullable', 'string', 'max:255'],
-            'customer_representative_phone' => ['nullable', 'string', 'max:255'],
-            'customer_license_count' => ['nullable', 'integer', 'min:0'],
-            'customer_notes' => ['nullable', 'string'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'category_id' => ['required', 'exists:ticket_categories,id'],
         ], [], [
             'customer_id' => 'khách hàng',
             'customer_name' => 'tên khách hàng',
-            'customer_address' => 'địa chỉ khách hàng',
-            'customer_phone' => 'điện thoại khách hàng',
-            'customer_email' => 'email khách hàng',
-            'customer_representative_name' => 'nhân viên đại diện',
-            'customer_representative_phone' => 'điện thoại nhân viên đại diện',
-            'customer_license_count' => 'số lượng license',
-            'customer_notes' => 'ghi chú khách hàng',
             'title' => 'tiêu đề',
             'description' => 'mô tả',
             'category_id' => 'loại ticket',
@@ -94,13 +79,6 @@ class TicketController extends Controller
             ? Customer::query()->findOrFail($validated['customer_id'])
             : Customer::create([
                 'name' => $validated['customer_name'],
-                'address' => $validated['customer_address'] ?? null,
-                'phone' => $validated['customer_phone'] ?? null,
-                'email' => $validated['customer_email'] ?? null,
-                'representative_name' => $validated['customer_representative_name'] ?? null,
-                'representative_phone' => $validated['customer_representative_phone'] ?? null,
-                'license_count' => $validated['customer_license_count'] ?? null,
-                'notes' => $validated['customer_notes'] ?? null,
             ]);
 
         $ticket = Ticket::create([

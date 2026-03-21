@@ -34,7 +34,7 @@
                 <section class="card panel stack" style="padding: 20px;">
                     <div>
                         <h3 class="section-title" style="font-size: 1.1rem;">Khách hàng</h3>
-                        <p class="section-copy">Gõ tên để tìm nhanh khách hàng đã có. Nếu không chọn khách có sẵn, hệ thống sẽ tạo khách mới từ thông tin bạn nhập.</p>
+                        <p class="section-copy">Gõ tên để tìm nhanh khách hàng đã có qua search service. Nếu không chọn khách có sẵn, hệ thống sẽ tạo mới khách chỉ với tên để bạn bổ sung sau.</p>
                     </div>
 
                     <input type="hidden" name="customer_id" id="customer_id" value="{{ old('customer_id') }}">
@@ -45,8 +45,8 @@
                             <input
                                 type="text"
                                 id="customer_search"
-                                value=""
-                                placeholder="Nhập tên khách hàng để tìm nhanh"
+                                value="{{ old('customer_name', $selectedCustomer?->name) }}"
+                                placeholder="Nhập tên khách hàng để tìm nhanh hoặc tạo mới"
                                 autocomplete="off"
                             >
                         </label>
@@ -59,53 +59,35 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-2" id="customer_manual_fields">
+                    <label>
+                        Tên khách hàng
+                        <input
+                            type="text"
+                            name="customer_name"
+                            id="customer_name"
+                            value="{{ old('customer_name', old('requester_name', $selectedCustomer?->name)) }}"
+                            required
+                        >
+                        <span class="inline-note">Chưa chọn khách có sẵn thì tên này sẽ được dùng để tạo hồ sơ khách mới.</span>
+                    </label>
+
+                    <div class="grid grid-2">
                         <label>
-                            Tên khách hàng
-                            <input type="text" name="customer_name" value="{{ old('customer_name', old('requester_name')) }}" required>
+                            Thông tin liên hệ hiện có
+                            <input type="text" id="customer_contact_preview" value="" disabled>
                         </label>
 
                         <label>
-                            Số điện thoại công ty
-                            <input type="text" name="customer_phone" value="{{ old('customer_phone') }}">
-                        </label>
-
-                        <label>
-                            Email công ty
-                            <input type="email" name="customer_email" value="{{ old('customer_email') }}">
-                        </label>
-
-                        <label>
-                            Số lượng license
-                            <input type="number" min="0" step="1" name="customer_license_count" value="{{ old('customer_license_count') }}">
-                        </label>
-
-                        <label>
-                            Nhân viên đại diện
-                            <input type="text" name="customer_representative_name" value="{{ old('customer_representative_name') }}">
-                        </label>
-
-                        <label>
-                            Điện thoại nhân viên đại diện
-                            <input type="text" name="customer_representative_phone" value="{{ old('customer_representative_phone') }}">
+                            Số lượng license hiện có
+                            <input type="text" id="customer_license_preview" value="" disabled>
                         </label>
                     </div>
-
-                    <label>
-                        Địa chỉ khách hàng
-                        <textarea name="customer_address" id="customer_address">{{ old('customer_address') }}</textarea>
-                    </label>
-
-                    <label>
-                        Ghi chú khách hàng
-                        <textarea name="customer_notes" id="customer_notes">{{ old('customer_notes') }}</textarea>
-                    </label>
                 </section>
 
-                <div class="grid grid-2">
+                <label>
                     Tiêu đề
                     <input type="text" name="title" value="{{ old('title') }}" required>
-                </div>
+                </label>
 
                 <div class="grid grid-2">
                     <label>
@@ -134,61 +116,29 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const customers = @json($customers);
+            const customerSearchUrl = @json(route('customers.search'));
+            const initialSelectedCustomer = @json($selectedCustomer);
             const searchInput = document.getElementById('customer_search');
             const customerIdInput = document.getElementById('customer_id');
+            const customerNameInput = document.getElementById('customer_name');
+            const customerContactPreview = document.getElementById('customer_contact_preview');
+            const customerLicensePreview = document.getElementById('customer_license_preview');
             const results = document.getElementById('customer_results');
             const selected = document.getElementById('customer_selected');
             const actions = document.getElementById('customer_actions');
             const clearButton = document.getElementById('clear_customer_selection');
-            const manualFields = Array.from(document.querySelectorAll('#customer_manual_fields input, #customer_address, #customer_notes'));
-            const customerNameInput = document.querySelector('input[name="customer_name"]');
+            let searchController = null;
+            let searchTimer = null;
 
             const oldCustomerId = customerIdInput.value;
-            let selectedCustomer = customers.find((customer) => String(customer.id) === String(oldCustomerId)) || null;
+            let selectedCustomer = oldCustomerId ? initialSelectedCustomer : null;
 
-            const escapeHtml = (value) => String(value ?? '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#039;');
-
-            const setManualFieldsDisabled = (disabled) => {
-                manualFields.forEach((field) => {
-                    field.disabled = disabled;
-                });
-
+            const setCustomerStateDisabled = (disabled) => {
+                customerNameInput.disabled = disabled;
+                customerNameInput.classList.toggle('input-disabled', disabled);
+                customerContactPreview.classList.toggle('input-disabled', disabled);
+                customerLicensePreview.classList.toggle('input-disabled', disabled);
                 customerNameInput.required = !disabled;
-            };
-
-            const renderSelectedCustomer = () => {
-                if (!selectedCustomer) {
-                    selected.style.display = 'none';
-                    selected.textContent = '';
-                    actions.style.display = 'none';
-                    customerIdInput.value = '';
-                    setManualFieldsDisabled(false);
-
-                    return;
-                }
-
-                const parts = [
-                    selectedCustomer.representative_name ? `Dai dien: ${selectedCustomer.representative_name}` : null,
-                    selectedCustomer.representative_phone ? `SDT dai dien: ${selectedCustomer.representative_phone}` : null,
-                    selectedCustomer.phone ? `SDT cong ty: ${selectedCustomer.phone}` : null,
-                    selectedCustomer.email ? `Email: ${selectedCustomer.email}` : null,
-                    selectedCustomer.license_count !== null ? `License: ${selectedCustomer.license_count}` : null,
-                ].filter(Boolean);
-
-                selected.style.display = 'block';
-                selected.textContent = `${selectedCustomer.name}${parts.length ? ' | ' + parts.join(' | ') : ''}`;
-                actions.style.display = 'flex';
-                customerIdInput.value = selectedCustomer.id;
-                searchInput.value = selectedCustomer.name;
-                results.style.display = 'none';
-                results.innerHTML = '';
-                setManualFieldsDisabled(true);
             };
 
             const renderResults = (matches) => {
@@ -201,17 +151,43 @@
 
                 results.innerHTML = matches.map((customer) => `
                     <button type="button" class="search-result" data-customer-id="${customer.id}">
-                        <strong>${escapeHtml(customer.name)}</strong>
-                        <span>${escapeHtml(customer.representative_name || customer.phone || customer.email || 'Chua co thong tin lien he')}</span>
+                        <strong>${customer.name_html}</strong>
+                        <span>${customer.contact_html}</span>
                     </button>
                 `).join('');
                 results.style.display = 'grid';
-                results.querySelectorAll('[data-customer-id]').forEach((button) => {
+                results.querySelectorAll('[data-customer-id]').forEach((button, index) => {
                     button.addEventListener('click', () => {
-                        selectedCustomer = customers.find((customer) => String(customer.id) === button.dataset.customerId) || null;
+                        selectedCustomer = matches[index];
                         renderSelectedCustomer();
                     });
                 });
+            };
+
+            const renderSelectedCustomer = () => {
+                if (!selectedCustomer) {
+                    selected.style.display = 'none';
+                    selected.textContent = '';
+                    actions.style.display = 'none';
+                    customerIdInput.value = '';
+                    customerContactPreview.value = '';
+                    customerLicensePreview.value = '';
+                    setCustomerStateDisabled(false);
+
+                    return;
+                }
+
+                selected.style.display = 'block';
+                selected.textContent = selectedCustomer.selected_label || selectedCustomer.name;
+                actions.style.display = 'flex';
+                customerIdInput.value = selectedCustomer.id;
+                searchInput.value = selectedCustomer.name;
+                customerNameInput.value = selectedCustomer.name;
+                customerContactPreview.value = selectedCustomer.contact_preview || 'Chưa có';
+                customerLicensePreview.value = selectedCustomer.license_preview || 'Chưa cập nhật';
+                results.style.display = 'none';
+                results.innerHTML = '';
+                setCustomerStateDisabled(true);
             };
 
             searchInput.addEventListener('input', () => {
@@ -219,7 +195,8 @@
                     return;
                 }
 
-                const keyword = searchInput.value.trim().toLowerCase();
+                const keyword = searchInput.value.trim();
+                customerNameInput.value = searchInput.value;
 
                 if (!keyword) {
                     renderResults([]);
@@ -227,16 +204,43 @@
                     return;
                 }
 
-                const matches = customers
-                    .filter((customer) => customer.name.toLowerCase().includes(keyword))
-                    .slice(0, 8);
+                window.clearTimeout(searchTimer);
 
-                renderResults(matches);
+                searchTimer = window.setTimeout(async () => {
+                    if (searchController) {
+                        searchController.abort();
+                    }
+
+                    searchController = new AbortController();
+
+                    try {
+                        const response = await fetch(`${customerSearchUrl}?q=${encodeURIComponent(keyword)}`, {
+                            headers: {
+                                'Accept': 'application/json',
+                            },
+                            signal: searchController.signal,
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Customer search request failed');
+                        }
+
+                        const payload = await response.json();
+                        renderResults(payload.data || []);
+                    } catch (error) {
+                        if (error.name === 'AbortError') {
+                            return;
+                        }
+
+                        renderResults([]);
+                    }
+                }, 180);
             });
 
             clearButton.addEventListener('click', () => {
                 selectedCustomer = null;
                 searchInput.value = '';
+                customerNameInput.value = '';
                 renderSelectedCustomer();
                 searchInput.focus();
             });

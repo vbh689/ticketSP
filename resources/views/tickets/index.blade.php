@@ -70,6 +70,7 @@
                 <label>
                     Tìm kiếm
                     <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" placeholder="IT-000001, VPN, tên người dùng">
+                    <!-- <span class="inline-note">Hỗ trợ gõ gần đúng, prefix matching và một số lỗi typo phổ biến.</span> -->
                 </label>
 
                 <label>
@@ -156,16 +157,16 @@
                                     <input type="checkbox" class="checkbox-input" name="ticket_ids[]" value="{{ $ticket->id }}" form="bulk-status-form" aria-label="Chọn ticket {{ $ticket->ticket_code }}">
                                 </td>
                                 <td>
-                                    <strong>{{ $ticket->ticket_code }}</strong>
+                                    <strong>{!! $ticket->highlighted_ticket_code ?? e($ticket->ticket_code) !!}</strong>
                                     <div class="meta">{{ $ticket->created_at->format('d/m/Y H:i') }}</div>
                                 </td>
                                 <td>
-                                    <a href="{{ route('tickets.show', $ticket) }}"><strong>{{ $ticket->title }}</strong></a>
+                                    <a href="{{ route('tickets.show', $ticket) }}"><strong>{!! $ticket->highlighted_title ?? e($ticket->title) !!}</strong></a>
                                     <div class="meta">{{ \Illuminate\Support\Str::limit($ticket->description, 90) }}</div>
                                 </td>
                                 <td>
-                                    <strong>{{ $ticket->requester_name }}</strong>
-                                    <div class="meta">{{ $ticket->requester_contact ?: 'Chưa có liên hệ' }}</div>
+                                    <strong>{!! $ticket->highlighted_requester_name ?? e($ticket->requester_name) !!}</strong>
+                                    <div class="meta">{!! $ticket->highlighted_requester_contact ?? e($ticket->requester_contact ?: 'Chưa có liên hệ') !!}</div>
                                 </td>
                                 <td>{{ $ticket->category->name }}</td>
                                 <td>

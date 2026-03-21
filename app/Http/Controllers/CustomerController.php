@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Support\Search\CustomerSearchService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,6 +22,17 @@ class CustomerController extends Controller
     {
         return view('customers.create', [
             'customer' => new Customer,
+        ]);
+    }
+
+    public function search(Request $request, CustomerSearchService $customerSearch): JsonResponse
+    {
+        $validated = $request->validate([
+            'q' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        return response()->json([
+            'data' => $customerSearch->search($validated['q'] ?? ''),
         ]);
     }
 

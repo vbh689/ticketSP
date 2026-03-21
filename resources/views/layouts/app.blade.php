@@ -195,6 +195,20 @@
                 padding: 12px 14px;
                 color: var(--text);
             }
+            input:disabled,
+            select:disabled,
+            textarea:disabled,
+            .input-disabled {
+                background: #ebe6de;
+                color: #827668;
+                cursor: not-allowed;
+            }
+            mark {
+                background: rgba(215, 165, 75, 0.35);
+                color: inherit;
+                padding: 0 2px;
+                border-radius: 4px;
+            }
             textarea {
                 min-height: 140px;
                 resize: vertical;

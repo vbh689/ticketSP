@@ -20,10 +20,6 @@ class TicketManagementTest extends TestCase
 
         $response = $this->actingAs($support)->post('/tickets', [
             'customer_name' => 'Cong ty Le Van A',
-            'customer_email' => 'leva@example.com',
-            'customer_phone' => '0909000111',
-            'customer_representative_name' => 'Le Van A',
-            'customer_representative_phone' => '0909000222',
             'title' => 'Không đăng nhập được wifi',
             'description' => 'Thiết bị báo sai mật khẩu dù đã đổi nhiều lần.',
             'category_id' => $category->id,
@@ -121,8 +117,55 @@ class TicketManagementTest extends TestCase
         $response = $this->actingAs($support)->get('/tickets?status=In%20Progress&category_id='.$network->id.'&assignee_id='.$assignee->id.'&search=VPN');
 
         $response->assertOk();
-        $response->assertSee('Sự cố VPN');
-        $response->assertDontSee('Cài lại Office');
+        $response->assertSeeText('Sự cố VPN');
+        $response->assertDontSeeText('Cài lại Office');
+    }
+
+    public function test_ticket_list_supports_fuzzy_search_with_typo_tolerance(): void
+    {
+        $support = User::factory()->create();
+        $category = TicketCategory::factory()->create();
+
+        Ticket::factory()->create([
+            'title' => 'Su co VPN van phong',
+            'requester_name' => 'Cong ty Sao Mai',
+            'category_id' => $category->id,
+            'created_by' => $support->id,
+        ]);
+
+        Ticket::factory()->create([
+            'title' => 'Cai dat may in',
+            'requester_name' => 'Cong ty Mat Troi',
+            'category_id' => $category->id,
+            'created_by' => $support->id,
+        ]);
+
+        $response = $this->actingAs($support)->get('/tickets?search=vpn vanphng');
+
+        $response->assertOk();
+        $response->assertSeeText('Su co VPN van phong');
+        $response->assertDontSeeText('Cai dat may in');
+        $response->assertSee('<mark>VPN</mark>', false);
+    }
+
+    public function test_ticket_search_falls_back_to_database_search_when_meilisearch_is_not_configured(): void
+    {
+        config()->set('scout.driver', 'database');
+
+        $support = User::factory()->create();
+        $category = TicketCategory::factory()->create();
+
+        Ticket::factory()->create([
+            'title' => 'VPN mat ket noi',
+            'requester_name' => 'Cong ty Sao Nam',
+            'category_id' => $category->id,
+            'created_by' => $support->id,
+        ]);
+
+        $response = $this->actingAs($support)->get('/tickets?search=vpn ketnoi');
+
+        $response->assertOk();
+        $response->assertSeeText('VPN mat ket noi');
     }
 
     public function test_support_can_claim_ticket_and_update_status(): void

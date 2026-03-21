@@ -97,4 +97,27 @@ class CustomerManagementTest extends TestCase
 
         $this->actingAs($support)->get(route('customers.index'))->assertForbidden();
     }
+
+    public function test_support_can_search_customers_for_ticket_creation_using_db_fallback(): void
+    {
+        $support = User::factory()->create(['is_manager' => false]);
+        Customer::query()->create([
+            'name' => 'Cong ty Sao Bac',
+            'representative_name' => 'Nguyen Ha',
+            'phone' => '0909111222',
+            'email' => 'hello@saobac.local',
+            'license_count' => 15,
+        ]);
+        Customer::query()->create([
+            'name' => 'Cong ty Bien Dong',
+        ]);
+
+        $response = $this->actingAs($support)->getJson(route('customers.search', [
+            'q' => 'sao bc',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.name', 'Cong ty Sao Bac');
+        $response->assertJsonPath('data.0.contact_preview', 'Nguyen Ha');
+    }
 }
