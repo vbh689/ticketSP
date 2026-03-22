@@ -25,5 +25,6 @@ Thumbs.db
 docs/*
 AGENTS.md
 
-#playwright
+# Playwright
 output/playwright 
+.playwright-cli
