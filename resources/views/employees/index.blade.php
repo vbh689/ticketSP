@@ -14,7 +14,7 @@
             </div>
 
             <div class="nav">
-                <a class="button button-muted" href="{{ route('admin.tags.index') }}">Tags</a>
+                <!-- <a class="button button-muted" href="{{ route('admin.tags.index') }}">Tags</a> -->
                 <a class="button button-muted" href="{{ route('tickets.index') }}">Quay lại tickets</a>
                 <a class="button button-primary" href="{{ route('employees.create') }}">Thêm nhân viên</a>
             </div>
