@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Customers;
 
+use App\Http\Controllers\SearchMaintenanceController;
 use App\Models\Customer;
 use App\Models\Ticket;
 use App\Models\User;
-use App\Http\Controllers\SearchMaintenanceController;
+use App\Support\Search\CustomerSearchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Scout\EngineManager;
 use Mockery;
@@ -126,6 +127,56 @@ class CustomerManagementTest extends TestCase
         $response->assertJsonFragment([
             'name' => 'Cong ty Sao Bac',
             'contact_preview' => 'Nguyen Ha',
+        ]);
+    }
+
+    public function test_support_customer_search_uses_current_db_records_when_meilisearch_hit_is_stale(): void
+    {
+        config()->set('scout.driver', 'meilisearch');
+        config()->set('scout.meilisearch.host', 'http://127.0.0.1:7700');
+
+        $support = User::factory()->create(['is_manager' => false]);
+        $abcCustomer = Customer::query()->create([
+            'name' => 'Cong Ty ABC',
+            'representative_name' => 'Nguyen Van An',
+        ]);
+        $xyzCustomer = Customer::query()->create([
+            'name' => 'Cong Ty XYZ',
+            'representative_name' => 'Tran Thi Binh',
+        ]);
+
+        $customerSearch = Mockery::mock(CustomerSearchService::class)
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+        $customerSearch->shouldReceive('fetchMeilisearchResponse')
+            ->once()
+            ->andReturn([
+                'hits' => [
+                    [
+                        'id' => $abcCustomer->id,
+                        'name' => 'Cong ty Match Tag',
+                    ],
+                    [
+                        'id' => $xyzCustomer->id,
+                        'name' => 'Cong ty New Tag',
+                    ],
+                ],
+            ]);
+        $this->app->instance(CustomerSearchService::class, $customerSearch);
+
+        $response = $this->actingAs($support)->getJson(route('customers.search', [
+            'q' => 'cong ty',
+        ]));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data');
+        $response->assertJsonPath('data.0.name', 'Cong Ty ABC');
+        $response->assertJsonPath('data.1.name', 'Cong Ty XYZ');
+        $response->assertJsonMissing([
+            'name' => 'Cong ty Match Tag',
+        ]);
+        $response->assertJsonMissing([
+            'name' => 'Cong ty New Tag',
         ]);
     }
 
