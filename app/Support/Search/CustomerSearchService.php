@@ -48,17 +48,41 @@ class CustomerSearchService
      */
     private function searchWithMeilisearch(string $query, int $limit): Collection
     {
-        $response = Customer::search($query)
-            ->options([
-                'limit' => $limit,
-                'attributesToHighlight' => ['name', 'representative_name', 'phone', 'email'],
-                'highlightPreTag' => '<mark>',
-                'highlightPostTag' => '</mark>',
+        $response = $this->fetchMeilisearchResponse($query, $limit);
+        $customerIds = collect($response['hits'] ?? [])
+            ->pluck('id')
+            ->filter(fn (mixed $id): bool => is_numeric($id))
+            ->map(fn (mixed $id): int => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($customerIds->isEmpty()) {
+            return collect();
+        }
+
+        $customersById = Customer::query()
+            ->whereKey($customerIds)
+            ->get([
+                'id',
+                'name',
+                'phone',
+                'email',
+                'representative_name',
+                'license_count',
             ])
-            ->raw();
+            ->keyBy('id');
 
         return collect($response['hits'] ?? [])
-            ->map(fn (array $hit): array => $this->transformMeilisearchHit($hit))
+            ->map(function (array $hit) use ($customersById, $query): ?array {
+                $customer = $customersById->get((int) ($hit['id'] ?? 0));
+
+                if (! $customer || $this->scoreCustomer($customer, $query) === null) {
+                    return null;
+                }
+
+                return $this->formatCustomerResult($customer, $query);
+            })
+            ->filter()
             ->values();
     }
 
@@ -78,39 +102,14 @@ class CustomerSearchService
                 'license_count',
             ])
             ->map(function (Customer $customer) use ($query): ?array {
-                $score = FuzzySearch::score([
-                    $customer->name,
-                    $customer->representative_name,
-                    $customer->phone,
-                    $customer->email,
-                ], $query);
+                $score = $this->scoreCustomer($customer, $query);
 
                 if ($score === null) {
                     return null;
                 }
 
                 return [
-                    'id' => $customer->id,
-                    'name' => $customer->name,
-                    'name_html' => FuzzySearch::highlightHtml($customer->name, $query),
-                    'contact_preview' => $this->contactPreview([
-                        'representative_name' => $customer->representative_name,
-                        'phone' => $customer->phone,
-                        'email' => $customer->email,
-                    ]),
-                    'contact_html' => $this->contactHtml([
-                        'representative_name' => $customer->representative_name,
-                        'phone' => $customer->phone,
-                        'email' => $customer->email,
-                    ], $query),
-                    'license_preview' => $customer->license_count !== null ? (string) $customer->license_count : 'Chưa cập nhật',
-                    'selected_label' => $this->selectedLabel([
-                        'name' => $customer->name,
-                        'representative_name' => $customer->representative_name,
-                        'phone' => $customer->phone,
-                        'email' => $customer->email,
-                        'license_count' => $customer->license_count,
-                    ]),
+                    ...$this->formatCustomerResult($customer, $query),
                     'score' => $score,
                 ];
             })
@@ -121,22 +120,52 @@ class CustomerSearchService
     }
 
     /**
-     * @param  array<string, mixed>  $hit
      * @return array<string, mixed>
      */
-    private function transformMeilisearchHit(array $hit): array
+    protected function fetchMeilisearchResponse(string $query, int $limit): array
     {
-        $formatted = $hit['_formatted'] ?? [];
+        return Customer::search($query)
+            ->options([
+                'limit' => $limit,
+                'attributesToHighlight' => ['name', 'representative_name', 'phone', 'email'],
+                'highlightPreTag' => '<mark>',
+                'highlightPostTag' => '</mark>',
+            ])
+            ->raw();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatCustomerResult(Customer $customer, string $query): array
+    {
+        $payload = [
+            'name' => $customer->name,
+            'representative_name' => $customer->representative_name,
+            'phone' => $customer->phone,
+            'email' => $customer->email,
+            'license_count' => $customer->license_count,
+        ];
 
         return [
-            'id' => (int) $hit['id'],
-            'name' => $hit['name'],
-            'name_html' => $formatted['name'] ?? e((string) $hit['name']),
-            'contact_preview' => $this->contactPreview($hit),
-            'contact_html' => $this->contactHtml($formatted ?: $hit),
-            'license_preview' => isset($hit['license_count']) && $hit['license_count'] !== null ? (string) $hit['license_count'] : 'Chưa cập nhật',
-            'selected_label' => $this->selectedLabel($hit),
+            'id' => $customer->id,
+            'name' => $customer->name,
+            'name_html' => FuzzySearch::highlightHtml($customer->name, $query),
+            'contact_preview' => $this->contactPreview($payload),
+            'contact_html' => $this->contactHtml($payload, $query),
+            'license_preview' => $customer->license_count !== null ? (string) $customer->license_count : 'Chưa cập nhật',
+            'selected_label' => $this->selectedLabel($payload),
         ];
+    }
+
+    private function scoreCustomer(Customer $customer, string $query): int|float|null
+    {
+        return FuzzySearch::score([
+            $customer->name,
+            $customer->representative_name,
+            $customer->phone,
+            $customer->email,
+        ], $query);
     }
 
     /**
