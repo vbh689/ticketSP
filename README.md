@@ -10,16 +10,14 @@
 - Nhận ticket về xử lý.
 - Cập nhật trạng thái `Open`, `In Progress`, `Resolved`, `Closed`.
 - Thêm ghi chú xử lý và lưu activity log.
-- Chia sẻ link xem ticket read-only bằng `view_key`.
+- Chia sẻ link xem ticket (read-only) bằng `view_key`.
 
 ## Stack
 
 - Laravel 12
-- Blade server-rendered UI
+- Blade UI (server-rendered)
 - MySQL cho môi trường triển khai chính
 - PHPUnit cho test nghiệp vụ
-
-`phpunit.xml` vẫn dùng SQLite in-memory để test chạy nhanh và độc lập.
 
 ## Cài đặt nhanh
 
@@ -39,7 +37,7 @@ php artisan key:generate
 
 3. Cập nhật cấu hình database trong `.env`.
 
-Mặc định `.env.example` đang để MySQL theo định hướng kỹ thuật của dự án. Nếu cần chạy local thật nhanh, bạn có thể đổi sang SQLite.
+Mặc định `.env.example` sử dụng SQLite, cập nhật MySQL connection nếu cần thiết.
 
 4. Chạy migration và seed:
 
@@ -53,7 +51,7 @@ Nếu muốn import thêm dữ liệu demo từ file CSV `docs/SupportTickets_De
 php artisan db:seed --class=SupportTicketsDemoSeeder
 ```
 
-5. Khởi động ứng dụng:
+5. Serve:
 
 ```bash
 composer run dev
@@ -76,28 +74,14 @@ Sau khi chạy `php artisan migrate:fresh --seed`, có thể đăng nhập bằn
 
 - `DatabaseSeeder`:
   seed dữ liệu nền cho hệ thống, gồm tài khoản nội bộ mẫu, loại ticket cơ bản, phương thức liên hệ mẫu và một vài ticket demo nhỏ để kiểm tra nhanh.
-- `SupportTicketsDemoSeeder`:
-  import dataset demo từ [docs/SupportTickets_Demo.csv](/Applications/MAMP/htdocs/ticketSP/docs/SupportTickets_Demo.csv). Khi import:
-  `Loại ticket` luôn được cố định là `Phần mềm`, cột `Thời lượng xử lý` bị bỏ qua, và ticket được map sang trạng thái nội bộ của hệ thống.
-
-Lệnh thường dùng:
 
 ```bash
 php artisan migrate:fresh --seed
-php artisan db:seed --class=SupportTicketsDemoSeeder
-```
-
-## Lệnh hữu ích
-
-```bash
-php artisan test
-php artisan migrate:fresh --seed
-php artisan route:list
 ```
 
 ## Meilisearch Local
 
-Tìm kiếm khách hàng và ticket đã sẵn sàng để dùng `Meilisearch` qua `Laravel Scout`, nhưng vẫn fallback về DB search nếu search service chưa chạy.
+Tìm kiếm khách hàng và ticket sử dụng `Meilisearch` qua `Laravel Scout`, fallback về DB search nếu search service chưa chạy.
 
 1. Khởi động Meilisearch:
 
@@ -134,15 +118,3 @@ php artisan scout:import "App\\Models\\Ticket"
   giao diện Blade cho login, backlog, tạo ticket và chi tiết ticket.
 - `tests/Feature/`:
   test bám theo `docs/test-plan.md`.
-
-## Tài liệu nghiệp vụ
-
-Đọc theo thứ tự:
-
-1. [`docs/README.md`](./docs/README.md)
-2. [`docs/product-overview.md`](./docs/product-overview.md)
-3. [`docs/workflows.md`](./docs/workflows.md)
-4. [`docs/data-model.md`](./docs/data-model.md)
-5. [`docs/screens-and-features.md`](./docs/screens-and-features.md)
-6. [`docs/technical-direction.md`](./docs/technical-direction.md)
-7. [`docs/test-plan.md`](./docs/test-plan.md)
