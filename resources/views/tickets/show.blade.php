@@ -154,7 +154,7 @@
             <article class="card panel stack">
                 <div>
                     <h2 class="section-title">Ghi chú xử lý</h2>
-                    <p class="section-copy">Dùng để lưu diễn biến làm việc trong quá trình support.</p>
+                    <p class="section-copy">Dùng để ghi chú/comment trong quá trình làm việc.</p>
                 </div>
 
                 @if (! $isReadOnly)
@@ -185,7 +185,7 @@
             <article class="card panel stack">
                 <div>
                     <h2 class="section-title">Lịch sử hoạt động</h2>
-                    <p class="section-copy">Audit trail cơ bản cho các hành động vận hành quan trọng.</p>
+                    <p class="section-copy">Audit log cơ bản.</p>
                 </div>
 
                 <div class="list">

@@ -37,8 +37,8 @@
 
         <section class="hero card">
             <div>
-                <h2 class="section-title" style="margin: 0;">Theo dõi backlog và nhận ticket ngay trên một màn hình</h2>
-                <p>Lọc theo trạng thái, loại sự cố hoặc người phụ trách để kiểm soát toàn bộ vòng đời ticket trong đội support.</p>
+                <h2 class="section-title" style="margin: 0;">Thống kê nhanh</h2>
+                <p>Thống kê nhanh số ticket đang chờ xử lý.</p>
             </div>
 
             <div class="metrics">
@@ -63,7 +63,7 @@
 
         <section class="card panel stack">
             <div>
-                <h2 class="section-title">Bộ lọc backlog</h2>
+                <h2 class="section-title">Bộ lọc</h2>
                 <p class="section-copy">Tìm nhanh theo mã ticket, người yêu cầu hoặc tiêu đề. Có thể kết hợp nhiều bộ lọc cùng lúc.</p>
             </div>
 
