@@ -94,7 +94,7 @@ docker compose -f docker-compose.meilisearch.yml up -d
 ```bash
 SCOUT_DRIVER=meilisearch
 SCOUT_QUEUE=true
-MEILISEARCH_HOST=http://127.0.0.1:7700
+MEILISEARCH_HOST=http://127.0.0.1:7701
 MEILISEARCH_KEY=ticketsp-master-key
 ```
 

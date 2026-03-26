@@ -133,7 +133,7 @@ class CustomerManagementTest extends TestCase
     public function test_support_customer_search_uses_current_db_records_when_meilisearch_hit_is_stale(): void
     {
         config()->set('scout.driver', 'meilisearch');
-        config()->set('scout.meilisearch.host', 'http://127.0.0.1:7700');
+        config()->set('scout.meilisearch.host', 'http://127.0.0.1:7701');
 
         $support = User::factory()->create(['is_manager' => false]);
         $abcCustomer = Customer::query()->create([
